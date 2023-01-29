@@ -27,7 +27,7 @@ function decodeInt(str: string): [number, string] {
   const value = parseInt(parts[0].slice(1));
 
   return [value, parts.slice(1).join('e')]
-};
+}
 
 function decodeList(str: string): [List, string] {
   const list = [];
