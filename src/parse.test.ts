@@ -16,4 +16,9 @@ describe("parse", () => {
     const data = await parse("src/list.torrent");
     expect(data).toEqual([["test", 7], ""]);
   });
+
+  test("it decodes a dict", async () => {
+    const data = await parse("src/dict.torrent");
+    expect(data).toEqual([{ spam: ["a", "b"] }, ""]);
+  });
 });
