@@ -1,72 +1,78 @@
 import fs from "fs/promises";
 
-type List = (string | number | List | Dict)[];
-type Dict = Record<string, any>;
+type List = (Buffer | number | List | Dict)[];
+type Dict = { [key: string]: Buffer | number | List | Dict };
 
-async function parse(path: string): Promise<string | number | List | Dict> {
-  const data = await fs.readFile(path);
-  const str = data.toString().trim();
-
-  return decode(str);
+async function parse(path: string): Promise<Buffer | number | List | Dict> {
+  const buf = await fs.readFile(path);
+  return decode(buf)[0];
 }
 
-function decode(str: string): [string | number | List | Dict, string] {
-  if (str[0] == "i") {
-    const [value, remainder] = decodeInt(str);
+export function decode(buf: Buffer): [Buffer | number | List | Dict, Buffer] {
+  if (buf[0] == "i".charCodeAt(0)) {
+    const [value, remainder] = decodeInt(buf);
     return [value, remainder];
-  } else if (str[0] == "l") {
-    const [value, remainder] = decodeList(str);
+  } else if (buf[0] == "l".charCodeAt(0)) {
+    const [value, remainder] = decodeList(buf);
     return [value, remainder];
-  } else if (str[0] == "d") {
-    const [value, remainder] = decodeDict(str);
+  } else if (buf[0] == "d".charCodeAt(0)) {
+    const [value, remainder] = decodeDict(buf);
     return [value, remainder];
   } else {
-    const [value, remainder] = decodeStr(str);
+    const [value, remainder] = decodeString(buf);
     return [value, remainder];
   }
 }
 
-function decodeInt(str: string): [number, string] {
-  const parts = str.split(/e(.*)/s);
-  const value = parseInt(parts[0].slice(1));
+export function decodeInt(buf: Buffer): [number, Buffer] {
+  let i = 0;
 
-  return [value, parts[1]];
+  while (buf[i] != "e".charCodeAt(0)) {
+    i += 1;
+  }
+  i += 1;
+
+  return [parseInt(buf.slice(1, i + 1).toString()), buf.slice(i)];
 }
 
-function decodeList(str: string): [List, string] {
+export function decodeList(buf: Buffer): [List, Buffer] {
   const list = [];
-  str = str.slice(1);
+  buf = buf.slice(1);
 
-  while (str[0] != "e") {
-    const [value, remainder] = decode(str);
+  while (buf[0] != "e".charCodeAt(0)) {
+    const [value, remainder] = decode(buf);
     list.push(value);
-    str = remainder;
+    buf = remainder;
   }
 
-  return [list, str.slice(1)];
+  return [list, buf.slice(1)];
 }
 
-function decodeStr(str: string): [string, string] {
-  const parts = str.split(/:(.*)/s);
-  const len = parts[0];
-  const value = parts[1].slice(0, parseInt(len));
-  const remainder = parts[1].slice(parseInt(len));
-
-  return [value, remainder];
-}
-
-function decodeDict(str: string): [Dict, string] {
+export function decodeDict(buf: Buffer): [Dict, Buffer] {
   const dict: Dict = {};
-  str = str.slice(1);
+  buf = buf.slice(1);
 
-  while (str[0] != "e") {
-    const [key, remainder] = decodeStr(str);
-    const [value, remainder2] = decode(remainder);
-    dict[key] = value;
-    str = remainder2;
+  while (buf[0] != "e".charCodeAt(0)) {
+    const [key, keyRemainder] = decodeString(buf);
+    const [value, valueRemainder] = decode(keyRemainder);
+    dict[key.toString()] = value;
+    buf = valueRemainder;
   }
 
-  return [dict, str.slice(1)];
+  return [dict, buf.slice(1)];
+}
+
+export function decodeString(buf: Buffer): [Buffer, Buffer] {
+  let i = 0;
+
+  while (buf[i] != ":".charCodeAt(0)) {
+    i += 1;
+  }
+  i += 1;
+
+  const len = parseInt(buf.slice(0, i).toString());
+
+  return [buf.slice(i, i + len), buf.slice(i + len)];
 }
 
 export default parse;
