@@ -1,11 +1,14 @@
 import fs from "fs/promises";
 
 type List = (Buffer | number | List | Dict)[];
-type Dict = { [key: string]: Buffer | number | List | Dict };
+type Dict = {
+  [key: string]: Buffer | number | List | Dict | undefined;
+  info?: Dict;
+};
 
-async function parse(path: string): Promise<Buffer | number | List | Dict> {
+async function parse(path: string): Promise<Dict> {
   const buf = await fs.readFile(path);
-  return decode(buf)[0];
+  return decodeDict(buf)[0];
 }
 
 export function decode(buf: Buffer): [Buffer | number | List | Dict, Buffer] {
@@ -73,6 +76,27 @@ export function decodeString(buf: Buffer): [Buffer, Buffer] {
   const len = parseInt(buf.slice(0, i).toString());
 
   return [buf.slice(i, i + len), buf.slice(i + len)];
+}
+
+export function encodeInfo(info: Dict): Buffer {
+  let buf = Buffer.from("d");
+
+  for (const [key, value] of Object.entries(info)) {
+    const keyBuf = Buffer.from(key.length + ":" + key);
+
+    let valueBuf;
+    if (typeof value == "number") {
+      valueBuf = Buffer.from("i" + value + "e");
+    } else if (Buffer.isBuffer(value)) {
+      valueBuf = Buffer.concat([Buffer.from(value.length + ":"), value]);
+    } else {
+      throw new Error("Unhandled data type");
+    }
+
+    buf = Buffer.concat([buf, keyBuf, valueBuf]);
+  }
+
+  return Buffer.concat([buf, Buffer.from("e")]);
 }
 
 export default parse;
