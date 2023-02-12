@@ -1,10 +1,10 @@
 import { describe, expect, test } from "@jest/globals";
 import {
-  decode,
   decodeString,
   decodeInt,
   decodeList,
   decodeDict,
+  encodeInfo,
 } from "./parse";
 
 describe("parse", () => {
@@ -32,10 +32,23 @@ describe("parse", () => {
   });
 
   test("it decodes a torrent file buffer", async () => {
-    const output = decode(Buffer.from("d4:spaml1:a1:bee"));
+    const output = decodeDict(Buffer.from("d4:spaml1:a1:bee"));
     expect(output).toEqual([
       { spam: [Buffer.from("a"), Buffer.from("b")] },
       Buffer.from(""),
     ]);
+  });
+
+  test("it encodes an info object", async () => {
+    const info = {
+      length: 2,
+      name: Buffer.from("yolo"),
+      "piece length": 1,
+      pieces: Buffer.from("ab"),
+    };
+
+    expect(encodeInfo(info)).toEqual(
+      Buffer.from("d6:lengthi2e4:name4:yolo12:piece lengthi1e6:pieces2:abe")
+    );
   });
 });
