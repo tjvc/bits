@@ -1,7 +1,8 @@
-import parse, { encodeInfo, urlEncode } from "./parse";
+import parse, { decodeDict, encodeInfo, urlEncode } from "./parse";
 import crypto from "crypto";
 import https from "https";
 import { URL } from "url";
+import net from "net";
 
 const result = parse(process.argv[2]);
 
@@ -31,7 +32,36 @@ result.then((data) => {
 
       https.get(url, (res) => {
         res.on("data", (d) => {
-          console.log(d.toString());
+          const peers = decodeDict(d)[0].peers;
+          peers.forEach((peer) => {
+            console.log(peer.ip.toString(), peer.port);
+          });
+
+          const handshakeHeader = Buffer.from(
+            "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00"
+          );
+
+          const peerId = Buffer.from(params.peer_id);
+
+          const handshake = Buffer.concat([handshakeHeader, digest, peerId]);
+
+          const peer = peers[Math.floor(Math.random() * peers.length)];
+
+          const client = net.createConnection(peer.port, peer.ip.toString());
+
+          client.on("connect", () => {
+            console.log("connected");
+          });
+
+          client.on("data", (data) => {
+            console.log(data);
+          });
+
+          client.on("close", () => {
+            console.log("closed");
+          });
+
+          client.write(handshake);
         });
       });
     }
