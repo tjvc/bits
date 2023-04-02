@@ -31,7 +31,7 @@ result.then((data) => {
       url.search += "&info_hash=" + encoded;
 
       https.get(url, (res) => {
-        res.on("data", (d) => {
+        res.on("data", async (d) => {
           const peers = decodeDict(d)[0].peers;
           peers.forEach((peer) => {
             console.log(peer.ip.toString(), peer.port);
@@ -61,7 +61,26 @@ result.then((data) => {
             console.log("closed");
           });
 
+          console.log("Sending handshake");
           client.write(handshake);
+
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          const interested = Buffer.from([0, 0, 0, 1, 2]);
+          console.log("Sending interested");
+          client.write(interested);
+
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+
+          const request = Buffer.alloc(17);
+          request.writeUInt32BE(13);
+          request.writeUInt8(6, 4);
+          request.writeUInt32BE(32, 5);
+          request.writeUInt32BE(0, 9);
+          request.writeUInt32BE(256, 13);
+
+          console.log("Requesting piece");
+          client.write(request);
         });
       });
     }
