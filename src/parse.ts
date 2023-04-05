@@ -1,11 +1,4 @@
-import fs from "fs/promises";
-import { BData, BDict } from "./b_data";
-
-async function parse(path: string): Promise<BDict> {
-  const buf = await fs.readFile(path);
-  const bData = new BData(buf);
-  return bData.decode();
-}
+import { BDict } from "./b_data";
 
 export function encodeInfo(info: BDict): Buffer {
   let buf = Buffer.from("d");
@@ -58,5 +51,3 @@ function range(start: number, end: number): number[] {
   const n = end - start + 1;
   return Array.from(new Array(n), (_, i) => i + start);
 }
-
-export default parse;
