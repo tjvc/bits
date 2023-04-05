@@ -1,10 +1,10 @@
 import fs from "fs/promises";
-import { BDecoder, BDict } from "./b_decoder";
+import { BData, BDict } from "./b_data";
 
 async function parse(path: string): Promise<BDict> {
   const buf = await fs.readFile(path);
-  const decoder = new BDecoder();
-  return decoder.decodeDict(buf)[0];
+  const bData = new BData(buf);
+  return bData.decode();
 }
 
 export function encodeInfo(info: BDict): Buffer {
