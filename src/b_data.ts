@@ -3,12 +3,18 @@ export type BDict = {
   [key: string]: Buffer | number | BList | BDict;
 };
 
-export class BDecoder {
-  decode(buf: Buffer): Buffer | number | BList | BDict {
-    return this.decodeAny(buf)[0];
+export class BData {
+  private data: Buffer;
+
+  constructor(data: Buffer) {
+    this.data = data;
   }
 
-  decodeAny(buf: Buffer): [Buffer | number | BList | BDict, Buffer] {
+  decode(): Buffer | number | BList | BDict {
+    return this.decodeAll(this.data)[0];
+  }
+
+  private decodeAll(buf: Buffer): [Buffer | number | BList | BDict, Buffer] {
     if (buf[0] == "i".charCodeAt(0)) {
       const [value, remainder] = this.decodeInt(buf);
       return [value, remainder];
@@ -24,7 +30,7 @@ export class BDecoder {
     }
   }
 
-  decodeInt(buf: Buffer): [number, Buffer] {
+  private decodeInt(buf: Buffer): [number, Buffer] {
     let i = 0;
 
     while (buf[i] != "e".charCodeAt(0)) {
@@ -35,12 +41,12 @@ export class BDecoder {
     return [parseInt(buf.slice(1, i + 1).toString()), buf.slice(i)];
   }
 
-  decodeList(buf: Buffer): [BList, Buffer] {
+  private decodeList(buf: Buffer): [BList, Buffer] {
     const list = [];
     buf = buf.slice(1);
 
     while (buf[0] != "e".charCodeAt(0)) {
-      const [value, remainder] = this.decodeAny(buf);
+      const [value, remainder] = this.decodeAll(buf);
       list.push(value);
       buf = remainder;
     }
@@ -48,13 +54,13 @@ export class BDecoder {
     return [list, buf.slice(1)];
   }
 
-  decodeDict(buf: Buffer): [BDict, Buffer] {
+  private decodeDict(buf: Buffer): [BDict, Buffer] {
     const dict: BDict = {};
     buf = buf.slice(1);
 
     while (buf[0] != "e".charCodeAt(0)) {
       const [key, keyRemainder] = this.decodeString(buf);
-      const [value, valueRemainder] = this.decodeAny(keyRemainder);
+      const [value, valueRemainder] = this.decodeAll(keyRemainder);
       dict[key.toString()] = value;
       buf = valueRemainder;
     }
@@ -62,7 +68,7 @@ export class BDecoder {
     return [dict, buf.slice(1)];
   }
 
-  decodeString(buf: Buffer): [Buffer, Buffer] {
+  private decodeString(buf: Buffer): [Buffer, Buffer] {
     let i = 0;
 
     while (buf[i] != ":".charCodeAt(0)) {

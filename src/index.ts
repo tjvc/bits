@@ -1,5 +1,5 @@
 import parse, { encodeInfo, urlEncode } from "./parse";
-import { BDecoder } from "./b_decoder";
+import { BData } from "./b_data";
 import crypto from "crypto";
 import https from "https";
 import { URL } from "url";
@@ -34,8 +34,8 @@ function main() {
 
         https.get(url, (res) => {
           res.on("data", async (d) => {
-            const decoder = new BDecoder();
-            const peers = decoder.decodeDict(d)[0].peers;
+            const bData = new BData(d);
+            const peers = bData.decode().peers;
             peers.forEach((peer) => {
               console.log(peer.ip.toString(), peer.port);
             });
