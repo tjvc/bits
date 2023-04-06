@@ -1,6 +1,5 @@
-import { encodeInfo, urlEncode } from "./parse";
 import { BData } from "./b_data";
-import crypto from "crypto";
+import { Info } from "./info";
 import fs from "fs/promises";
 import https from "https";
 import { URL } from "url";
@@ -12,11 +11,8 @@ async function main() {
   const data = bData.decode();
 
   if (data.info) {
-    const info = data.info;
-    const shasum = crypto.createHash("sha1");
-    shasum.update(encodeInfo(info));
-    const digest = shasum.digest();
-    const encoded = urlEncode(digest);
+    const info = new Info(data.info);
+    const encoded = info.hash().urlEncode();
 
     if (data.announce) {
       const url = new URL(data.announce.toString());
@@ -47,7 +43,11 @@ async function main() {
           );
 
           const peerId = Buffer.from(params.peer_id);
-          const handshake = Buffer.concat([handshakeHeader, digest, peerId]);
+          const handshake = Buffer.concat([
+            handshakeHeader,
+            info.hash().raw,
+            peerId,
+          ]);
 
           const peer = peers[Math.floor(Math.random() * peers.length)];
           const client = net.createConnection(peer.port, peer.ip.toString());
