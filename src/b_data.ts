@@ -1,4 +1,4 @@
-type BList = (Buffer | number | BList | BDict)[];
+export type BList = (Buffer | number | BList | BDict)[];
 export type BDict = {
   [key: string]: Buffer | number | BList | BDict;
 };
