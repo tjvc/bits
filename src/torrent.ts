@@ -6,24 +6,24 @@ export class Torrent {
   private info_dict: BDict;
 
   constructor(data: BDecoded) {
-    if (typeof data === "object" && "announce" in data && "info" in data) {
-      if (Buffer.isBuffer(data.announce)) {
-        this.announce = data.announce;
-      } else {
-        throw new Error("Invalid torrent file");
-      }
-      if (
-        typeof data.info !== "number" &&
-        !Buffer.isBuffer(data.info) &&
-        !Array.isArray(data.info)
-      ) {
-        this.info_dict = data.info;
-      } else {
-        throw new Error("Invalid torrent file");
-      }
-    } else {
+    if (
+      !this.isBDict(data) ||
+      !this.isBuffer(data.announce) ||
+      !this.isBDict(data.info)
+    ) {
       throw new Error("Invalid torrent file");
     }
+
+    this.announce = data.announce;
+    this.info_dict = data.info;
+  }
+
+  private isBDict(data: BDecoded): data is BDict {
+    return data?.constructor == Object;
+  }
+
+  private isBuffer(data: BDecoded): data is Buffer {
+    return data?.constructor == Buffer;
   }
 
   trackerUrl(): string {
