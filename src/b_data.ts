@@ -1,6 +1,7 @@
-export type BList = (Buffer | number | BList | BDict)[];
+export type BDecoded = Buffer | number | BList | BDict;
+export type BList = BDecoded[];
 export type BDict = {
-  [key: string]: Buffer | number | BList | BDict;
+  [key: string]: BDecoded;
 };
 
 export class BData {
@@ -14,7 +15,7 @@ export class BData {
     return this.decodeAll(this.data)[0];
   }
 
-  private decodeAll(buf: Buffer): [Buffer | number | BList | BDict, Buffer] {
+  private decodeAll(buf: Buffer): [BDecoded, Buffer] {
     if (buf[0] == "i".charCodeAt(0)) {
       const [value, remainder] = this.decodeInt(buf);
       return [value, remainder];
