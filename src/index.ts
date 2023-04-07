@@ -1,14 +1,10 @@
-import { BData, BDict } from "./b_data";
-import { Info } from "./info";
+import { BData } from "./b_data";
+import { Torrent } from "./torrent";
+
 import fs from "fs/promises";
 import https from "https";
-import { URL } from "url";
 import net from "net";
-
-type Torrent = {
-  announce: Buffer;
-  info: BDict;
-};
+import { URL } from "url";
 
 type Peer = {
   ip: string;
@@ -22,12 +18,13 @@ type Download = {
 async function main() {
   const buf = await fs.readFile(process.argv[2]);
   const bData = new BData(buf);
-  const data = bData.decode() as Torrent;
+  const data = bData.decode();
+  const torrent = new Torrent(data);
 
-  const info = new Info(data.info);
+  const info = torrent.info();
   const encoded = info.hash().urlEncode();
 
-  const url = new URL(data.announce.toString());
+  const url = new URL(torrent.trackerUrl());
 
   const params = {
     peer_id: "11111111111111111111",
