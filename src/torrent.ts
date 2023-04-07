@@ -19,11 +19,13 @@ export class Torrent {
   }
 
   private isBDict(data: BDecoded): data is BDict {
-    return data?.constructor == Object;
+    return (
+      typeof data == "object" && !Array.isArray(data) && !Buffer.isBuffer(data)
+    );
   }
 
   private isBuffer(data: BDecoded): data is Buffer {
-    return data?.constructor == Buffer;
+    return Buffer.isBuffer(data);
   }
 
   trackerUrl(): string {
