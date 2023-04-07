@@ -10,7 +10,7 @@ describe("Torrent", () => {
 
   test("it throws an error when initialised with a BDict without an info key of type BDict", async () => {
     expect(() => {
-      new Torrent({ announce: Buffer.from("test") });
+      new Torrent({ announce: Buffer.from("test"), info: [] });
     }).toThrow("Invalid torrent file");
   });
 
