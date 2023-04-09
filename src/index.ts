@@ -1,19 +1,11 @@
 import { BData } from "./b_data";
 import { Torrent } from "./torrent";
+import { Download } from "./download";
 
 import fs from "fs/promises";
 import https from "https";
 import net from "net";
 import { URL } from "url";
-
-type Peer = {
-  ip: string;
-  port: number;
-};
-
-type Download = {
-  peers: Peer[];
-};
 
 async function main() {
   const buf = await fs.readFile(process.argv[2]);
@@ -41,7 +33,7 @@ async function main() {
 
   https.get(url, (res) => {
     res.on("data", async (d) => {
-      const download = new BData(d).decode() as unknown as Download;
+      const download = new Download(new BData(d).decode());
       const peers = download.peers;
       peers.forEach((peer) => {
         console.log(peer.ip.toString(), peer.port);
