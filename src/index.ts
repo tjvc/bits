@@ -36,7 +36,7 @@ async function main() {
       const download = new Download(new BData(d).decode());
       const peers = download.peers;
       peers.forEach((peer) => {
-        console.log(peer.ip.toString(), peer.port);
+        console.log(peer.ip, peer.port);
       });
 
       const handshakeHeader = Buffer.from(
