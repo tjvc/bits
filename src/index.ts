@@ -1,10 +1,10 @@
 import { BData } from "./b_data";
-import { Torrent } from "./torrent";
 import { Download } from "./download";
+import { PeerConnection } from "./peer_connection";
+import { Torrent } from "./torrent";
 import { TrackerRequest } from "./tracker_request";
 
 import fs from "fs/promises";
-import net from "net";
 
 async function main() {
   const buf = await fs.readFile(process.argv[2]);
@@ -39,11 +39,10 @@ async function main() {
   ]);
 
   const peer = peers[Math.floor(Math.random() * peers.length)];
-  const client = net.createConnection(peer.port, peer.ip.toString());
 
-  client.on("connect", () => {
-    console.log("connected");
-  });
+  const peerConnection = await new PeerConnection(peer);
+
+  const client = peerConnection.connection;
 
   client.on("data", (data) => {
     console.log(data);

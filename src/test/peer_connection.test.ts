@@ -1,16 +1,27 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { Socket } from "net";
 
-class PeerConnection {
-  constructor(connection: Socket) {
-    connection.on("message", (message: string) => {
-      connection.write(message);
-    });
-  }
-}
+import { PeerConnection } from "../peer_connection";
 
 describe("PeerConnection", () => {
-  test.todo("creates a TCP connection (on initialisation?)");
+  test("opens a TCP connection", () => {
+    const peer = {
+      ip: Buffer.from("127.0.0.1"),
+      port: 54321,
+    };
+    const mockSocket = new Socket();
+    const spy = jest.spyOn(mockSocket, "connect");
+    const peerConnection = new PeerConnection(peer, mockSocket);
+
+    peerConnection.connect();
+
+    expect(spy).toHaveBeenCalledWith(
+      peer.port,
+      peer.ip.toString(),
+      expect.any(Function) // callback
+    );
+  });
+
   test.todo("sends a handshake message");
   test.todo("receives a handshake message and updates connection state");
   test.todo(
@@ -21,20 +32,6 @@ describe("PeerConnection", () => {
   );
   test.todo("it receives a piece message and ???");
   test.todo("sends keep-alive messages");
-
-  test("writes back messages", () => {
-    const connection = new Socket();
-    new PeerConnection(connection);
-
-    const mockWrite = jest.fn();
-    connection.write = mockWrite as jest.MockedFunction<
-      typeof connection.write
-    >;
-
-    connection.emit("message", "test");
-
-    expect(mockWrite).toHaveBeenCalledWith("test");
-  });
 
   // TODO: Incomplete messages
   // TODO: Out of order messages
