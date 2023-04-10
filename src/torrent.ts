@@ -1,5 +1,6 @@
 import { BDecoded, BDict } from "./b_data";
 import { Info } from "./info";
+import { InfoHash } from "./info_hash";
 
 export class Torrent {
   private announce: Buffer;
@@ -34,5 +35,9 @@ export class Torrent {
 
   info(): Info {
     return new Info(this.info_dict);
+  }
+
+  infoHash(): InfoHash {
+    return this.info().hash();
   }
 }

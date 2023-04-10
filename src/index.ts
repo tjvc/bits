@@ -12,13 +12,13 @@ async function main() {
   const data = bData.decode();
   const torrent = new Torrent(data);
 
-  const info = torrent.info();
+  const infoHash = torrent.infoHash();
 
   const peerId = "11111111111111111111";
   const trackerRequest = new TrackerRequest(
     peerId,
     torrent.trackerUrl(),
-    info.hash()
+    infoHash
   );
   const trackerResponse = await trackerRequest.send();
 
@@ -34,7 +34,7 @@ async function main() {
 
   const handshake = Buffer.concat([
     handshakeHeader,
-    info.hash().raw,
+    infoHash.raw,
     Buffer.from(peerId),
   ]);
 
