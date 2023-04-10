@@ -1,6 +1,6 @@
 import { BDecoded, BDict, BList } from "./b_data";
 
-type Peer = {
+export type Peer = {
   ip: Buffer;
   port: number;
 };
