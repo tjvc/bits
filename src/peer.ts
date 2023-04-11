@@ -13,6 +13,7 @@ export class Peer {
   peerId: string;
   connection: Socket;
   state: PeerState;
+  bitfield: Buffer | null = null;
 
   constructor(
     ip: Buffer,
@@ -45,9 +46,15 @@ export class Peer {
     await this.connection.write(this.handshakeMessage());
   }
 
-  receive(data: Buffer) {
+  async receive(data: Buffer) {
     if (this.handshakeMessage().equals(data)) {
       this.state = PeerState.HandshakeCompleted;
+      return;
+    }
+
+    if (data[4] === 5) {
+      this.bitfield = data.slice(5);
+      await this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
     }
   }
 

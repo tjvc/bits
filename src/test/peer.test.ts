@@ -50,9 +50,25 @@ describe("Peer", () => {
     expect(peer.state).toEqual("HANDSHAKE_COMPLETED");
   });
 
-  test.todo(
-    "receives a bitfield message, sets the bitfield and sends an interested message"
-  );
+  test("receives a bitfield message, sets the bitfield and sends an interested message", async () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = "456";
+
+    const mockSocket = new Socket();
+    const writeSpy = jest
+      .spyOn(mockSocket, "write")
+      .mockImplementation(jest.fn<typeof mockSocket.write>());
+
+    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
+
+    mockSocket.emit("data", Buffer.from("0000092f05ffffffff", "hex"));
+
+    expect(peer.bitfield).toEqual(Buffer.from("ffffffff", "hex"));
+    expect(writeSpy).toHaveBeenCalledWith(Buffer.from([0, 0, 0, 1, 2]));
+  });
+
   test.todo(
     "it receives an unchoke message, updates the connection state and sends a request message"
   );

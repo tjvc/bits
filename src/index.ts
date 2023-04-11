@@ -44,12 +44,6 @@ async function main() {
     console.log("closed");
   });
 
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  const interested = Buffer.from([0, 0, 0, 1, 2]);
-  console.log("Sending interested");
-  client.write(interested);
-
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
   const request = Buffer.alloc(17);
