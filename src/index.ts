@@ -21,21 +21,15 @@ async function main() {
   );
   const trackerResponse = await trackerRequest.send();
 
-  const download = new Download(new BData(trackerResponse).decode());
+  const download = new Download(
+    new BData(trackerResponse).decode(),
+    infoHash.raw,
+    peerId
+  );
   const peers = download.peers;
   peers.forEach((peer) => {
     console.log(peer.ip, peer.port);
   });
-
-  const handshakeHeader = Buffer.from(
-    "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00"
-  );
-
-  const handshake = Buffer.concat([
-    handshakeHeader,
-    infoHash.raw,
-    Buffer.from(peerId),
-  ]);
 
   const peer = peers[Math.floor(Math.random() * peers.length)];
   await peer.connect();
@@ -49,9 +43,6 @@ async function main() {
   client.on("close", () => {
     console.log("closed");
   });
-
-  console.log("Sending handshake");
-  client.write(handshake);
 
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
