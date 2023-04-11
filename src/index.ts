@@ -1,6 +1,5 @@
 import { BData } from "./b_data";
 import { Download } from "./download";
-import { PeerConnection } from "./peer_connection";
 import { Torrent } from "./torrent";
 import { TrackerRequest } from "./tracker_request";
 
@@ -39,10 +38,9 @@ async function main() {
   ]);
 
   const peer = peers[Math.floor(Math.random() * peers.length)];
+  await peer.connect();
 
-  const peerConnection = await new PeerConnection(peer);
-
-  const client = peerConnection.connection;
+  const client = peer.connection;
 
   client.on("data", (data) => {
     console.log(data);

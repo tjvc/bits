@@ -1,23 +1,21 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { Socket } from "net";
 
-import { PeerConnection } from "../peer_connection";
+import { Peer } from "../peer";
 
-describe("PeerConnection", () => {
+describe("Peer", () => {
   test("opens a TCP connection", () => {
-    const peer = {
-      ip: Buffer.from("127.0.0.1"),
-      port: 54321,
-    };
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
     const mockSocket = new Socket();
     const spy = jest.spyOn(mockSocket, "connect");
-    const peerConnection = new PeerConnection(peer, mockSocket);
+    const peer = new Peer(ip, port, mockSocket);
 
-    peerConnection.connect();
+    peer.connect();
 
     expect(spy).toHaveBeenCalledWith(
-      peer.port,
-      peer.ip.toString(),
+      port,
+      "127.0.0.1",
       expect.any(Function) // callback
     );
   });
