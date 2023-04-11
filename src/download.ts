@@ -1,9 +1,5 @@
 import { BDecoded, BDict, BList } from "./b_data";
-
-export type Peer = {
-  ip: Buffer;
-  port: number;
-};
+import { Peer } from "./peer";
 
 export class Download {
   peers: Peer[] = [];
@@ -12,7 +8,7 @@ export class Download {
     if (this.isBDict(data) && this.isBList(data.peers)) {
       data.peers.forEach((peer: BDecoded) => {
         if (this.isPeer(peer)) {
-          this.peers.push(peer);
+          this.peers.push(new Peer(peer.ip, peer.port));
         }
       });
     }
@@ -30,7 +26,7 @@ export class Download {
     );
   }
 
-  private isPeer(data: BDecoded): data is Peer {
+  private isPeer(data: BDecoded): data is { ip: Buffer; port: number } {
     return (
       this.isBDict(data) &&
       Buffer.isBuffer(data.ip) &&
