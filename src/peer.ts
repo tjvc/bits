@@ -3,6 +3,7 @@ import { Socket } from "net";
 enum PeerState {
   Disconnected = "DISCONNECTED",
   Connected = "CONNECTED",
+  HandshakeCompleted = "HANDSHAKE_COMPLETED",
 }
 
 export class Peer {
@@ -27,6 +28,10 @@ export class Peer {
     this.infoHash = infoHash;
     this.peerId = peerId;
     this.state = state;
+
+    this.connection.on("data", (data) => {
+      this.receive(data);
+    });
   }
 
   async connect() {
@@ -37,16 +42,24 @@ export class Peer {
   }
 
   async handshake() {
+    await this.connection.write(this.handshakeMessage());
+  }
+
+  receive(data: Buffer) {
+    if (this.handshakeMessage().equals(data)) {
+      this.state = PeerState.HandshakeCompleted;
+    }
+  }
+
+  private handshakeMessage() {
     const handshakeHeader = Buffer.from(
       "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00"
     );
 
-    const handshake = Buffer.concat([
+    return Buffer.concat([
       handshakeHeader,
       this.infoHash,
       Buffer.from(this.peerId),
     ]);
-
-    await this.connection.write(handshake);
   }
 }

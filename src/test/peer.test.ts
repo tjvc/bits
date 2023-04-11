@@ -30,7 +30,26 @@ describe("Peer", () => {
     expect(peer.state).toEqual("CONNECTED");
   });
 
-  test.todo("receives handshake and updates state");
+  test("receives handshake message and updates state", () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = "456";
+
+    const mockSocket = new Socket();
+
+    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
+
+    mockSocket.emit(
+      "data",
+      Buffer.from(
+        "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00123456"
+      )
+    );
+
+    expect(peer.state).toEqual("HANDSHAKE_COMPLETED");
+  });
+
   test.todo(
     "receives a bitfield message, sets the bitfield and sends an interested message"
   );
