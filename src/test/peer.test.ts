@@ -4,24 +4,33 @@ import { Socket } from "net";
 import { Peer } from "../peer";
 
 describe("Peer", () => {
-  test("opens a TCP connection", () => {
+  test("opens a TCP connection, updates state and sends handshake", async () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = "456";
+
     const mockSocket = new Socket();
-    const spy = jest.spyOn(mockSocket, "connect");
-    const peer = new Peer(ip, port, mockSocket);
+    const connectSpy = jest
+      .spyOn(mockSocket, "connect")
+      .mockImplementation(jest.fn<typeof mockSocket.connect>());
+    const writeSpy = jest
+      .spyOn(mockSocket, "write")
+      .mockImplementation(jest.fn<typeof mockSocket.write>());
 
-    peer.connect();
+    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
+    await peer.connect();
 
-    expect(spy).toHaveBeenCalledWith(
-      port,
-      "127.0.0.1",
-      expect.any(Function) // callback
+    expect(connectSpy).toHaveBeenCalledWith(port, "127.0.0.1");
+    expect(writeSpy).toHaveBeenCalledWith(
+      Buffer.from(
+        "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00123456"
+      )
     );
+    expect(peer.state).toEqual("CONNECTED");
   });
 
-  test.todo("sends a handshake message");
-  test.todo("receives a handshake message and updates connection state");
+  test.todo("receives handshake and updates state");
   test.todo(
     "receives a bitfield message, sets the bitfield and sends an interested message"
   );

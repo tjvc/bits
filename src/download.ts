@@ -4,11 +4,11 @@ import { Peer } from "./peer";
 export class Download {
   peers: Peer[] = [];
 
-  constructor(data: BDecoded) {
+  constructor(data: BDecoded, infoHash: Buffer, peerId: string) {
     if (this.isBDict(data) && this.isBList(data.peers)) {
       data.peers.forEach((peer: BDecoded) => {
         if (this.isPeer(peer)) {
-          this.peers.push(new Peer(peer.ip, peer.port));
+          this.peers.push(new Peer(peer.ip, peer.port, infoHash, peerId));
         }
       });
     }
