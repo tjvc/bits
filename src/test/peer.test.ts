@@ -4,7 +4,7 @@ import { Socket } from "net";
 import { Peer } from "../peer";
 
 describe("Peer", () => {
-  test("opens a TCP connection, updates state and sends handshake", async () => {
+  test("opens a TCP connection", async () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
@@ -14,20 +14,33 @@ describe("Peer", () => {
     const connectSpy = jest
       .spyOn(mockSocket, "connect")
       .mockImplementation(jest.fn<typeof mockSocket.connect>());
+
+    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
+    peer.connect();
+
+    expect(connectSpy).toHaveBeenCalledWith(port, "127.0.0.1");
+  });
+
+  test("connects, updates state and sends handshake", async () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = "456";
+
+    const mockSocket = new Socket();
     const writeSpy = jest
       .spyOn(mockSocket, "write")
       .mockImplementation(jest.fn<typeof mockSocket.write>());
 
     const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
-    await peer.connect();
+    mockSocket.emit("connect");
 
-    expect(connectSpy).toHaveBeenCalledWith(port, "127.0.0.1");
+    expect(peer.state).toEqual("CONNECTED");
     expect(writeSpy).toHaveBeenCalledWith(
       Buffer.from(
         "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00123456"
       )
     );
-    expect(peer.state).toEqual("CONNECTED");
   });
 
   test("receives handshake message and updates state", () => {
