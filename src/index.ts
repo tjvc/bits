@@ -32,7 +32,7 @@ async function main() {
   });
 
   const peer = peers[Math.floor(Math.random() * peers.length)];
-  await peer.connect();
+  peer.connect();
 
   const client = peer.connection;
 

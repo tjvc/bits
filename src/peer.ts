@@ -33,20 +33,22 @@ export class Peer {
     this.connection.on("data", (data) => {
       this.receive(data);
     });
+
+    this.connection.on("connect", () => {
+      this.state = PeerState.Connected;
+      this.handshake();
+    });
   }
 
-  async connect() {
-    await this.connection.connect(this.port, this.ip.toString());
-    this.state = PeerState.Connected;
-
-    await this.handshake();
+  connect() {
+    this.connection.connect(this.port, this.ip.toString());
   }
 
-  async handshake() {
-    await this.connection.write(this.handshakeMessage());
+  handshake() {
+    this.connection.write(this.handshakeMessage());
   }
 
-  async receive(data: Buffer) {
+  receive(data: Buffer) {
     if (this.handshakeMessage().equals(data)) {
       this.state = PeerState.HandshakeCompleted;
       return;
@@ -54,7 +56,7 @@ export class Peer {
 
     if (data[4] === 5) {
       this.bitfield = data.slice(5);
-      await this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
+      this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
     }
   }
 
