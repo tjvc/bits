@@ -26,23 +26,12 @@ async function main() {
     infoHash.raw,
     peerId
   );
-  const peers = download.peers;
-  peers.forEach((peer) => {
-    console.log(peer.ip, peer.port);
-  });
 
+  const peers = download.peers;
   const peer = peers[Math.floor(Math.random() * peers.length)];
   peer.connect();
 
   const client = peer.connection;
-
-  client.on("data", (data) => {
-    console.log(data);
-  });
-
-  client.on("close", () => {
-    console.log("closed");
-  });
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
