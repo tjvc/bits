@@ -4,6 +4,7 @@ enum PeerState {
   Disconnected = "DISCONNECTED",
   Connected = "CONNECTED",
   HandshakeCompleted = "HANDSHAKE_COMPLETED",
+  Unchoked = "UNCHOKED",
 }
 
 export class Peer {
@@ -68,6 +69,20 @@ export class Peer {
       this.bitfield = data.slice(5);
       console.log("Sending interested");
       this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
+    }
+
+    if (data[4] === 1) {
+      console.log("Received unchoke");
+      this.state = PeerState.Unchoked;
+      console.log("Requesting piece");
+
+      const request = Buffer.alloc(17);
+      request.writeUInt32BE(13);
+      request.writeUInt8(6, 4);
+      request.writeUInt32BE(32, 5);
+      request.writeUInt32BE(0, 9);
+      request.writeUInt32BE(256, 13);
+      this.connection.write(request);
     }
   }
 
