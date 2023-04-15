@@ -31,12 +31,19 @@ export class Peer {
     this.state = state;
 
     this.connection.on("data", (data) => {
+      console.log("Received:", data);
       this.receive(data);
     });
 
     this.connection.on("connect", () => {
       this.state = PeerState.Connected;
+      console.log("Connected to", this.ip.toString());
       this.handshake();
+    });
+
+    this.connection.on("close", () => {
+      this.state = PeerState.Disconnected;
+      console.log("Closed");
     });
   }
 
@@ -45,17 +52,21 @@ export class Peer {
   }
 
   handshake() {
+    console.log("Sending handshake");
     this.connection.write(this.handshakeMessage());
   }
 
   receive(data: Buffer) {
     if (this.handshakeMessage().equals(data)) {
+      console.log("Received handshake");
       this.state = PeerState.HandshakeCompleted;
       return;
     }
 
     if (data[4] === 5) {
+      console.log("Received bitfield");
       this.bitfield = data.slice(5);
+      console.log("Sending interested");
       this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
     }
   }
