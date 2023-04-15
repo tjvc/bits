@@ -82,9 +82,25 @@ describe("Peer", () => {
     expect(writeSpy).toHaveBeenCalledWith(Buffer.from([0, 0, 0, 1, 2]));
   });
 
-  test.todo(
-    "it receives an unchoke message, updates the connection state and sends a request message"
-  );
+  test("it receives an unchoke message, updates the connection state and sends a request message", async () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = "456";
+
+    const mockSocket = new Socket();
+    const writeSpy = jest
+      .spyOn(mockSocket, "write")
+      .mockImplementation(jest.fn<typeof mockSocket.write>());
+
+    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
+
+    mockSocket.emit("data", Buffer.from("0000000101", "hex"));
+
+    expect(peer.state).toEqual("UNCHOKED");
+    expect(writeSpy).toHaveBeenCalled();
+  });
+
   test.todo("it receives a piece message and ???");
   test.todo("sends keep-alive messages");
 

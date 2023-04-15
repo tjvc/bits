@@ -30,20 +30,6 @@ async function main() {
   const peers = download.peers;
   const peer = peers[Math.floor(Math.random() * peers.length)];
   peer.connect();
-
-  const client = peer.connection;
-
-  await new Promise((resolve) => setTimeout(resolve, 5000));
-
-  const request = Buffer.alloc(17);
-  request.writeUInt32BE(13);
-  request.writeUInt8(6, 4);
-  request.writeUInt32BE(32, 5);
-  request.writeUInt32BE(0, 9);
-  request.writeUInt32BE(256, 13);
-
-  console.log("Requesting piece");
-  client.write(request);
 }
 
 main();
