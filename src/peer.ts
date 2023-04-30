@@ -1,5 +1,7 @@
 import { Socket } from "net";
 
+import { Message, MessageType } from "./message";
+
 enum PeerState {
   Disconnected = "DISCONNECTED",
   Connected = "CONNECTED",
@@ -64,14 +66,16 @@ export class Peer {
       return;
     }
 
-    if (data[4] === 5) {
+    const message = new Message(data);
+
+    if (message.type() === MessageType.Bitfield) {
       console.log("Received bitfield");
-      this.bitfield = data.slice(5);
+      this.bitfield = message.body();
       console.log("Sending interested");
       this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
     }
 
-    if (data[4] === 1) {
+    if (message.type() === MessageType.Unchoke) {
       console.log("Received unchoke");
       this.state = PeerState.Unchoked;
       console.log("Requesting piece");
