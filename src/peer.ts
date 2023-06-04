@@ -17,6 +17,7 @@ export class Peer {
   connection: Socket;
   state: PeerState;
   bitfield: Buffer | null = null;
+  currentMessage: Message | null = null;
 
   constructor(
     ip: Buffer,
@@ -66,16 +67,20 @@ export class Peer {
       return;
     }
 
-    const message = new Message(data);
+    if (this.currentMessage && !this.currentMessage.isComplete()) {
+      this.currentMessage.append(data);
+    } else {
+      this.currentMessage = new Message(data);
+    }
 
-    if (message.type() === MessageType.Bitfield) {
+    if (this.currentMessage.type() === MessageType.Bitfield) {
       console.log("Received bitfield");
-      this.bitfield = message.body();
+      this.bitfield = this.currentMessage.body();
       console.log("Sending interested");
       this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
     }
 
-    if (message.type() === MessageType.Unchoke) {
+    if (this.currentMessage.type() === MessageType.Unchoke) {
       console.log("Received unchoke");
       this.state = PeerState.Unchoked;
       console.log("Requesting piece");
