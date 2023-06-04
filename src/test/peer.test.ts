@@ -98,7 +98,7 @@ describe("Peer", () => {
     mockSocket.emit("data", Buffer.from("0000000101", "hex"));
 
     expect(peer.state).toEqual("UNCHOKED");
-    expect(writeSpy).toHaveBeenCalled();
+    expect(writeSpy).toHaveBeenCalled(); // TODO: Assert request message
   });
 
   test("it receives a message in multiple chunks", async () => {
@@ -120,7 +120,8 @@ describe("Peer", () => {
   test.todo("it receives a piece message and ???");
   test.todo("sends keep-alive messages");
 
-  // TODO: Incomplete messages
+  // TODO: Invalid messages (no length, no type, etc.)
+  // TODO: Out of order message chunks
   // TODO: Out of order messages
 });
 
