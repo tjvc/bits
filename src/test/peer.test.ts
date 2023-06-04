@@ -101,9 +101,31 @@ describe("Peer", () => {
     expect(writeSpy).toHaveBeenCalled();
   });
 
+  test("it receives a message in multiple chunks", async () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = "456";
+
+    const mockSocket = new MockSocket();
+
+    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
+
+    mockSocket.emit("data", Buffer.from("0000092f05", "hex"));
+    mockSocket.emit("data", Buffer.from("ffffffff", "hex"));
+
+    expect(peer.bitfield).toEqual(Buffer.from("ffffffff", "hex"));
+  });
+
   test.todo("it receives a piece message and ???");
   test.todo("sends keep-alive messages");
 
   // TODO: Incomplete messages
   // TODO: Out of order messages
 });
+
+class MockSocket extends Socket {
+  write() {
+    return true;
+  }
+}

@@ -21,6 +21,28 @@ describe("Message", () => {
     });
   });
 
+  describe("isComplete", () => {
+    test("returns true when length is equal to message length", () => {
+      const data = Buffer.alloc(6);
+      data.writeUInt32BE(6, 0);
+      data.writeUInt8(1, 4);
+      data.write("a", 5);
+      const message = new Message(data);
+
+      expect(message.isComplete()).toBe(true);
+    });
+
+    test("returns false when length is less than message length", () => {
+      const data = Buffer.alloc(6);
+      data.writeUInt32BE(7, 0);
+      data.writeUInt8(1, 4);
+      data.write("a", 5);
+      const message = new Message(data);
+
+      expect(message.isComplete()).toBe(false);
+    });
+  });
+
   describe("type", () => {
     test("returns null when data length is less than 5 bytes", () => {
       const data = Buffer.alloc(4);
@@ -46,6 +68,18 @@ describe("Message", () => {
       const message = new Message(data);
 
       expect(message.type()).toBe(MessageType.Bitfield);
+    });
+  });
+
+  describe("append", () => {
+    test("appends data to the message", () => {
+      const data = Buffer.from("a");
+      const message = new Message(data);
+      const newData = Buffer.from("b");
+
+      message.append(newData);
+
+      expect(message.data).toEqual(Buffer.from("ab"));
     });
   });
 });
