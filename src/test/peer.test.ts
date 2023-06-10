@@ -1,7 +1,7 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { Socket } from "net";
 
 import { Peer } from "../peer";
+import { PeerConnection } from "../peer_connection";
 
 describe("Peer", () => {
   test("opens a TCP connection", async () => {
@@ -9,16 +9,15 @@ describe("Peer", () => {
     const port = 54321;
     const infoHash = Buffer.from("123");
     const peerId = "456";
-
-    const mockSocket = new Socket();
+    const peerConnection = new PeerConnection(ip, port);
     const connectSpy = jest
-      .spyOn(mockSocket, "connect")
-      .mockImplementation(jest.fn<typeof mockSocket.connect>());
+      .spyOn(peerConnection, "connect")
+      .mockImplementation(jest.fn<typeof peerConnection.connect>());
+    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
 
-    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
     peer.connect();
 
-    expect(connectSpy).toHaveBeenCalledWith(port, "127.0.0.1");
+    expect(connectSpy).toHaveBeenCalled();
   });
 
   test("connects, updates state and sends handshake", async () => {
@@ -26,14 +25,13 @@ describe("Peer", () => {
     const port = 54321;
     const infoHash = Buffer.from("123");
     const peerId = "456";
-
-    const mockSocket = new Socket();
+    const peerConnection = new PeerConnection(ip, port);
     const writeSpy = jest
-      .spyOn(mockSocket, "write")
-      .mockImplementation(jest.fn<typeof mockSocket.write>());
+      .spyOn(peerConnection, "write")
+      .mockImplementation(jest.fn<typeof peerConnection.write>());
+    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
 
-    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
-    mockSocket.emit("connect");
+    peerConnection.emit("connect");
 
     expect(peer.state).toEqual("CONNECTED");
     expect(writeSpy).toHaveBeenCalledWith(
@@ -48,13 +46,11 @@ describe("Peer", () => {
     const port = 54321;
     const infoHash = Buffer.from("123");
     const peerId = "456";
+    const peerConnection = new PeerConnection(ip, port);
+    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
 
-    const mockSocket = new Socket();
-
-    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
-
-    mockSocket.emit(
-      "data",
+    peerConnection.emit(
+      "message",
       Buffer.from(
         "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00123456"
       )
@@ -68,15 +64,13 @@ describe("Peer", () => {
     const port = 54321;
     const infoHash = Buffer.from("123");
     const peerId = "456";
-
-    const mockSocket = new Socket();
+    const peerConnection = new PeerConnection(ip, port);
     const writeSpy = jest
-      .spyOn(mockSocket, "write")
-      .mockImplementation(jest.fn<typeof mockSocket.write>());
+      .spyOn(peerConnection, "write")
+      .mockImplementation(jest.fn<typeof peerConnection.write>());
+    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
 
-    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
-
-    mockSocket.emit("data", Buffer.from("0000092f05ffffffff", "hex"));
+    peerConnection.emit("message", Buffer.from("0000092f05ffffffff", "hex"));
 
     expect(peer.bitfield).toEqual(Buffer.from("ffffffff", "hex"));
     expect(writeSpy).toHaveBeenCalledWith(Buffer.from([0, 0, 0, 1, 2]));
@@ -87,46 +81,20 @@ describe("Peer", () => {
     const port = 54321;
     const infoHash = Buffer.from("123");
     const peerId = "456";
-
-    const mockSocket = new Socket();
+    const peerConnection = new PeerConnection(ip, port);
     const writeSpy = jest
-      .spyOn(mockSocket, "write")
-      .mockImplementation(jest.fn<typeof mockSocket.write>());
+      .spyOn(peerConnection, "write")
+      .mockImplementation(jest.fn<typeof peerConnection.write>());
+    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
 
-    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
-
-    mockSocket.emit("data", Buffer.from("0000000101", "hex"));
+    peerConnection.emit("message", Buffer.from("0000000101", "hex"));
 
     expect(peer.state).toEqual("UNCHOKED");
     expect(writeSpy).toHaveBeenCalled(); // TODO: Assert request message
   });
 
-  test("it receives a message in multiple chunks", async () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = "456";
-
-    const mockSocket = new MockSocket();
-
-    const peer = new Peer(ip, port, infoHash, peerId, mockSocket);
-
-    mockSocket.emit("data", Buffer.from("0000092f05", "hex"));
-    mockSocket.emit("data", Buffer.from("ffffffff", "hex"));
-
-    expect(peer.bitfield).toEqual(Buffer.from("ffffffff", "hex"));
-  });
-
   test.todo("it receives a piece message and ???");
-  test.todo("sends keep-alive messages");
 
   // TODO: Invalid messages (no length, no type, etc.)
-  // TODO: Out of order message chunks
   // TODO: Out of order messages
 });
-
-class MockSocket extends Socket {
-  write() {
-    return true;
-  }
-}

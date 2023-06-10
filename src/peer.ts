@@ -1,6 +1,5 @@
-import { Socket } from "net";
-
 import { Message, MessageType } from "./message";
+import { PeerConnection } from "./peer_connection";
 
 enum PeerState {
   Disconnected = "DISCONNECTED",
@@ -14,28 +13,27 @@ export class Peer {
   port: number;
   infoHash: Buffer;
   peerId: string;
-  connection: Socket;
+  connection: PeerConnection;
   state: PeerState;
   bitfield: Buffer | null = null;
-  currentMessage: Message | null = null;
 
   constructor(
     ip: Buffer,
     port: number,
     infoHash: Buffer,
     peerId: string,
-    connection: Socket = new Socket(),
+    connection?: PeerConnection,
     state: PeerState = PeerState.Disconnected
   ) {
-    this.connection = connection;
     this.ip = ip;
     this.port = port;
+    this.connection = connection || new PeerConnection(this.ip, this.port);
     this.infoHash = infoHash;
     this.peerId = peerId;
     this.state = state;
 
-    this.connection.on("data", (data) => {
-      console.log("Received:", data);
+    this.connection.on("message", (data) => {
+      console.log("Received message");
       this.receive(data);
     });
 
@@ -52,7 +50,7 @@ export class Peer {
   }
 
   connect() {
-    this.connection.connect(this.port, this.ip.toString());
+    this.connection.connect();
   }
 
   handshake() {
@@ -61,26 +59,23 @@ export class Peer {
   }
 
   receive(data: Buffer) {
+    // TODO: Match on any reserved bytes
     if (this.handshakeMessage().equals(data)) {
       console.log("Received handshake");
       this.state = PeerState.HandshakeCompleted;
       return;
     }
 
-    if (this.currentMessage && !this.currentMessage.isComplete()) {
-      this.currentMessage.append(data);
-    } else {
-      this.currentMessage = new Message(data);
-    }
+    const message = new Message(data);
 
-    if (this.currentMessage.type() === MessageType.Bitfield) {
+    if (message.type() === MessageType.Bitfield) {
       console.log("Received bitfield");
-      this.bitfield = this.currentMessage.body();
+      this.bitfield = message.body();
       console.log("Sending interested");
       this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
     }
 
-    if (this.currentMessage.type() === MessageType.Unchoke) {
+    if (message.type() === MessageType.Unchoke) {
       console.log("Received unchoke");
       this.state = PeerState.Unchoked;
       console.log("Requesting piece");
