@@ -2,6 +2,7 @@ import { describe, expect, jest, test } from "@jest/globals";
 
 import { Peer } from "../peer";
 import { PeerConnection } from "../peer_connection";
+import { PeerState } from "../peer";
 
 describe("Peer", () => {
   test("opens a TCP connection", async () => {
@@ -59,6 +60,24 @@ describe("Peer", () => {
     expect(peer.state).toEqual("HANDSHAKE_COMPLETED");
   });
 
+  test("closes connection if another message is received before successful handshake", () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = "456";
+    const peerConnection = new PeerConnection(ip, port);
+    const writeSpy = jest
+      .spyOn(peerConnection, "close")
+      .mockImplementation(jest.fn<typeof peerConnection.close>());
+    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
+
+    // Bitfield message
+    peerConnection.emit("message", Buffer.from("0000092f05ffffffff", "hex"));
+
+    expect(writeSpy).toHaveBeenCalled();
+    expect(peer.state).toEqual("DISCONNECTED");
+  });
+
   test("receives a bitfield message, sets the bitfield and sends an interested message", async () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
@@ -68,7 +87,14 @@ describe("Peer", () => {
     const writeSpy = jest
       .spyOn(peerConnection, "write")
       .mockImplementation(jest.fn<typeof peerConnection.write>());
-    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
+    const peer = new Peer(
+      ip,
+      port,
+      infoHash,
+      peerId,
+      peerConnection,
+      PeerState.HandshakeCompleted
+    );
 
     peerConnection.emit("message", Buffer.from("0000092f05ffffffff", "hex"));
 

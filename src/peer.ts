@@ -1,7 +1,7 @@
 import { Message, MessageType } from "./message";
 import { PeerConnection } from "./peer_connection";
 
-enum PeerState {
+export enum PeerState {
   Disconnected = "DISCONNECTED",
   Connected = "CONNECTED",
   HandshakeCompleted = "HANDSHAKE_COMPLETED",
@@ -44,7 +44,7 @@ export class Peer {
 
     this.connection.on("close", () => {
       this.state = PeerState.Disconnected;
-      console.debug("Connection closed");
+      console.debug("Connection closed by peer");
     });
   }
 
@@ -69,6 +69,12 @@ export class Peer {
 
     if (message.type() === MessageType.Bitfield) {
       console.debug("Received bitfield");
+      if (this.state != PeerState.HandshakeCompleted) {
+        console.debug("Received bitfield before handshake");
+        this.connection.close();
+        console.debug("Connection closed");
+        return;
+      }
       this.bitfield = message.body();
       console.debug("Sending interested");
       this.connection.write(Buffer.from([0, 0, 0, 1, 2]));

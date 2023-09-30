@@ -85,4 +85,8 @@ export class PeerConnection extends EventEmitter {
   write(data: Buffer) {
     this.connection.write(data);
   }
+
+  close() {
+    this.connection.end();
+  }
 }

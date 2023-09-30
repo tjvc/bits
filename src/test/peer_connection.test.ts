@@ -31,6 +31,20 @@ describe("PeerConnection", () => {
     expect(connectSpy).toHaveBeenCalled();
   });
 
+  test("closes a TCP connection", () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const socket = new Socket();
+    const connectSpy = jest
+      .spyOn(socket, "end")
+      .mockImplementation(jest.fn<typeof socket.end>());
+    const peerConnection = new PeerConnection(ip, port, socket);
+
+    peerConnection.close();
+
+    expect(connectSpy).toHaveBeenCalled();
+  });
+
   describe("receive", () => {
     function createMessage(
       message: string,
