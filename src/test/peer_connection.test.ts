@@ -64,6 +64,15 @@ describe("PeerConnection", () => {
       return new PeerConnection(ip, port, socket, buffer);
     }
 
+    function createHandshake() {
+      return Buffer.concat([
+        HANDSHAKE_HEADER,
+        Buffer.from("\x00\x00\x00\x00\x00\x00\x00\x00"), // Reserved
+        Buffer.alloc(20, 1), // Info hash
+        Buffer.alloc(20, 2), // Peer ID
+      ]);
+    }
+
     describe("with an empty buffer and a complete message", () => {
       test("emits a message event with the message data", () => {
         const socket = new Socket();
@@ -201,17 +210,11 @@ describe("PeerConnection", () => {
       });
     });
 
-    // TODO: We should handle incomplete and multiple messages
-    // (I've seen the handshake and bitfield received in a single chunk, for example)
     describe("with a handshake message", () => {
       test("emits a message event with the handshake message", () => {
         const socket = new Socket();
         const peerConnection = createPeerConnection(socket);
-        const handshakeMessage = Buffer.concat([
-          HANDSHAKE_HEADER,
-          Buffer.alloc(20, 1), // Info hash
-          Buffer.alloc(20, 2), // Peer ID
-        ]);
+        const handshakeMessage = createHandshake();
         const messageSpy = jest.fn();
         peerConnection.on("message", messageSpy);
 
@@ -219,6 +222,43 @@ describe("PeerConnection", () => {
 
         expect(messageSpy).toHaveBeenCalledTimes(1);
         expect(messageSpy).toHaveBeenCalledWith(handshakeMessage);
+      });
+    });
+
+    describe("with a handshake message and another complete message", () => {
+      test("emits two message events", () => {
+        const socket = new Socket();
+        const peerConnection = createPeerConnection(socket);
+        const handshakeMessage = createHandshake();
+        const message = createMessage("hello", 5);
+        const messageSpy = jest.fn();
+        peerConnection.on("message", messageSpy);
+
+        socket.emit("data", Buffer.concat([handshakeMessage, message]));
+
+        expect(messageSpy).toHaveBeenCalledTimes(2);
+        expect(messageSpy).toHaveBeenNthCalledWith(1, handshakeMessage);
+        expect(messageSpy).toHaveBeenNthCalledWith(2, message);
+      });
+    });
+
+    describe("with a handshake message and another incomplete message", () => {
+      test("emits a message event with the handshake message and buffers the incomplete message", () => {
+        const socket = new Socket();
+        const peerConnection = createPeerConnection(socket);
+        const handshakeMessage = createHandshake();
+        const incompleteMessage = createMessage("hell", 5);
+        const messageSpy = jest.fn();
+        peerConnection.on("message", messageSpy);
+
+        socket.emit(
+          "data",
+          Buffer.concat([handshakeMessage, incompleteMessage])
+        );
+
+        expect(messageSpy).toHaveBeenCalledTimes(1);
+        expect(messageSpy).toHaveBeenCalledWith(handshakeMessage);
+        expect(peerConnection.buffer).toEqual(incompleteMessage);
       });
     });
 

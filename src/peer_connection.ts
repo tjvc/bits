@@ -38,11 +38,6 @@ export class PeerConnection extends EventEmitter {
   receive(data: Buffer) {
     console.debug("Received data:", data);
 
-    if (data.slice(0, 20).equals(HANDSHAKE_HEADER)) {
-      this.emit("message", data.slice(0, 68)); // Header (20) + Reserved (8) + Info hash (20) + Peer ID (20)
-      return;
-    }
-
     while (data.length > 0) {
       if (this.buffer.length > 0) {
         // If there is an incomplete message in the buffer, try to complete it
@@ -67,17 +62,21 @@ export class PeerConnection extends EventEmitter {
         continue;
       } else {
         // If there is no data in the buffer, assume we have a new message
-        const length = data.readUInt32BE(0);
+
+        // We assume a handshake will always be a first message
+        const length = data.slice(0, 20).equals(HANDSHAKE_HEADER)
+          ? 68 // Header (20) + Reserved (8) + Info hash (20) + Peer ID (20)
+          : data.readUInt32BE(0) + 4;
 
         // If the message is incomplete, append it to the buffer and wait for more data
-        if (length > data.length - 4) {
+        if (length > data.length) {
           this.buffer = Buffer.concat([this.buffer, data]);
           return;
         }
 
         // If the message is complete, emit a message event
-        this.emit("message", data.slice(0, length + 4));
-        data = data.slice(length + 4);
+        this.emit("message", data.slice(0, length));
+        data = data.slice(length);
       }
     }
   }
