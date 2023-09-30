@@ -36,7 +36,7 @@ export class PeerConnection extends EventEmitter {
   }
 
   receive(data: Buffer) {
-    console.log("Received:", data);
+    console.debug("Received data:", data);
 
     if (data.slice(0, 20).equals(HANDSHAKE_HEADER)) {
       this.emit("message", data.slice(0, 68)); // Header (20) + Reserved (8) + Info hash (20) + Peer ID (20)

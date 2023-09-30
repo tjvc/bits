@@ -33,19 +33,18 @@ export class Peer {
     this.state = state;
 
     this.connection.on("message", (data) => {
-      console.log("Received message");
       this.receive(data);
     });
 
     this.connection.on("connect", () => {
       this.state = PeerState.Connected;
-      console.log("Connected to", this.ip.toString());
+      console.debug("Connected to", this.ip.toString());
       this.handshake();
     });
 
     this.connection.on("close", () => {
       this.state = PeerState.Disconnected;
-      console.log("Closed");
+      console.debug("Connection closed");
     });
   }
 
@@ -54,14 +53,14 @@ export class Peer {
   }
 
   handshake() {
-    console.log("Sending handshake");
+    console.debug("Sending handshake");
     this.connection.write(this.handshakeMessage());
   }
 
   receive(data: Buffer) {
     // TODO: Match on any reserved bytes
     if (this.handshakeMessage().equals(data)) {
-      console.log("Received handshake");
+      console.debug("Received handshake");
       this.state = PeerState.HandshakeCompleted;
       return;
     }
@@ -69,16 +68,16 @@ export class Peer {
     const message = new Message(data);
 
     if (message.type() === MessageType.Bitfield) {
-      console.log("Received bitfield");
+      console.debug("Received bitfield");
       this.bitfield = message.body();
-      console.log("Sending interested");
+      console.debug("Sending interested");
       this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
     }
 
     if (message.type() === MessageType.Unchoke) {
-      console.log("Received unchoke");
+      console.debug("Received unchoke");
       this.state = PeerState.Unchoked;
-      console.log("Requesting piece");
+      console.debug("Requesting piece");
 
       const request = Buffer.alloc(17);
       request.writeUInt32BE(13);
