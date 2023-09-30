@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 import { Socket } from "net";
 
-export const HANDSHAKE_HEADER = Buffer.from("\x13BitTorrent protocol");
+import { Handshake } from "./handshake";
 
 export class PeerConnection extends EventEmitter {
   ip: Buffer;
@@ -64,7 +64,7 @@ export class PeerConnection extends EventEmitter {
         // If there is no data in the buffer, assume we have a new message
 
         // We assume a handshake will always be a first message
-        const length = data.slice(0, 20).equals(HANDSHAKE_HEADER)
+        const length = data.slice(0, 20).equals(Handshake.header)
           ? 68 // Header (20) + Reserved (8) + Info hash (20) + Peer ID (20)
           : data.readUInt32BE(0) + 4;
 

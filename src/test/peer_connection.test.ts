@@ -1,7 +1,8 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { Socket } from "net";
 
-import { PeerConnection, HANDSHAKE_HEADER } from "../peer_connection";
+import { Handshake } from "../handshake";
+import { PeerConnection } from "../peer_connection";
 
 describe("PeerConnection", () => {
   test("opens a TCP connection", () => {
@@ -66,7 +67,7 @@ describe("PeerConnection", () => {
 
     function createHandshake() {
       return Buffer.concat([
-        HANDSHAKE_HEADER,
+        Handshake.header,
         Buffer.from("\x00\x00\x00\x00\x00\x00\x00\x00"), // Reserved
         Buffer.alloc(20, 1), // Info hash
         Buffer.alloc(20, 2), // Peer ID

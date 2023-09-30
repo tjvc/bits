@@ -24,7 +24,7 @@ async function main() {
   const download = new Download(
     new BData(trackerResponse).decode(),
     infoHash.raw,
-    peerId
+    Buffer.from(peerId)
   );
 
   const peers = download.peers;

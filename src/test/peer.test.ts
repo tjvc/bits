@@ -1,5 +1,6 @@
 import { describe, expect, jest, test } from "@jest/globals";
 
+import { Handshake } from "../handshake";
 import { Peer } from "../peer";
 import { PeerConnection } from "../peer_connection";
 import { PeerState } from "../peer";
@@ -9,12 +10,13 @@ describe("Peer", () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
-    const peerId = "456";
+    const peerId = Buffer.from("456");
+    const clientId = Buffer.from("789");
     const peerConnection = new PeerConnection(ip, port);
     const connectSpy = jest
       .spyOn(peerConnection, "connect")
       .mockImplementation(jest.fn<typeof peerConnection.connect>());
-    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
+    const peer = new Peer(ip, port, infoHash, peerId, clientId, peerConnection);
 
     peer.connect();
 
@@ -25,19 +27,20 @@ describe("Peer", () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
-    const peerId = "456";
+    const peerId = Buffer.from("456");
+    const clientId = Buffer.from("789");
     const peerConnection = new PeerConnection(ip, port);
     const writeSpy = jest
       .spyOn(peerConnection, "write")
       .mockImplementation(jest.fn<typeof peerConnection.write>());
-    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
+    const peer = new Peer(ip, port, infoHash, peerId, clientId, peerConnection);
 
     peerConnection.emit("connect");
 
     expect(peer.state).toEqual("CONNECTED");
     expect(writeSpy).toHaveBeenCalledWith(
       Buffer.from(
-        "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00123456"
+        "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00123789"
       )
     );
   });
@@ -45,17 +48,21 @@ describe("Peer", () => {
   test("receives handshake message and updates state", () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = "456";
+    const infoHash = Buffer.alloc(20, 1);
+    const peerId = Buffer.alloc(20, 2);
+    const clientId = Buffer.alloc(20, 3);
     const peerConnection = new PeerConnection(ip, port);
-    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
-
-    peerConnection.emit(
-      "message",
-      Buffer.from(
-        "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00123456"
-      )
+    const peer = new Peer(
+      ip,
+      port,
+      infoHash,
+      peerId,
+      clientId,
+      peerConnection,
+      PeerState.Connected
     );
+
+    peerConnection.emit("message", new Handshake(infoHash, peerId).data());
 
     expect(peer.state).toEqual("HANDSHAKE_COMPLETED");
   });
@@ -64,12 +71,13 @@ describe("Peer", () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
-    const peerId = "456";
+    const peerId = Buffer.from("456");
+    const clientId = Buffer.from("789");
     const peerConnection = new PeerConnection(ip, port);
     const writeSpy = jest
       .spyOn(peerConnection, "close")
       .mockImplementation(jest.fn<typeof peerConnection.close>());
-    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
+    const peer = new Peer(ip, port, infoHash, peerId, clientId, peerConnection);
 
     // Bitfield message
     peerConnection.emit("message", Buffer.from("0000092f05ffffffff", "hex"));
@@ -82,7 +90,8 @@ describe("Peer", () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
-    const peerId = "456";
+    const peerId = Buffer.from("456");
+    const clientId = Buffer.from("789");
     const peerConnection = new PeerConnection(ip, port);
     const writeSpy = jest
       .spyOn(peerConnection, "write")
@@ -92,6 +101,7 @@ describe("Peer", () => {
       port,
       infoHash,
       peerId,
+      clientId,
       peerConnection,
       PeerState.HandshakeCompleted
     );
@@ -106,12 +116,13 @@ describe("Peer", () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
-    const peerId = "456";
+    const peerId = Buffer.from("456");
+    const clientId = Buffer.from("789");
     const peerConnection = new PeerConnection(ip, port);
     const writeSpy = jest
       .spyOn(peerConnection, "write")
       .mockImplementation(jest.fn<typeof peerConnection.write>());
-    const peer = new Peer(ip, port, infoHash, peerId, peerConnection);
+    const peer = new Peer(ip, port, infoHash, peerId, clientId, peerConnection);
 
     peerConnection.emit("message", Buffer.from("0000000101", "hex"));
 

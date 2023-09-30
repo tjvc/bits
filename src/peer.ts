@@ -1,3 +1,4 @@
+import { Handshake } from "./handshake";
 import { Message, MessageType } from "./message";
 import { PeerConnection } from "./peer_connection";
 
@@ -11,17 +12,19 @@ export enum PeerState {
 export class Peer {
   ip: Buffer;
   port: number;
+  id: Buffer;
   infoHash: Buffer;
-  peerId: string;
   connection: PeerConnection;
   state: PeerState;
+  clientId: Buffer;
   bitfield: Buffer | null = null;
 
   constructor(
     ip: Buffer,
     port: number,
     infoHash: Buffer,
-    peerId: string,
+    id: Buffer,
+    clientId: Buffer,
     connection?: PeerConnection,
     state: PeerState = PeerState.Disconnected
   ) {
@@ -29,7 +32,8 @@ export class Peer {
     this.port = port;
     this.connection = connection || new PeerConnection(this.ip, this.port);
     this.infoHash = infoHash;
-    this.peerId = peerId;
+    this.id = id;
+    this.clientId = clientId;
     this.state = state;
 
     this.connection.on("message", (data) => {
@@ -39,7 +43,7 @@ export class Peer {
     this.connection.on("connect", () => {
       this.state = PeerState.Connected;
       console.debug("Connected to", this.ip.toString());
-      this.handshake();
+      this.sendHandshake();
     });
 
     this.connection.on("close", () => {
@@ -52,17 +56,21 @@ export class Peer {
     this.connection.connect();
   }
 
-  handshake() {
+  sendHandshake() {
     console.debug("Sending handshake");
-    this.connection.write(this.handshakeMessage());
+    const handshake = new Handshake(this.infoHash, this.clientId);
+    this.connection.write(handshake.data());
   }
 
   receive(data: Buffer) {
-    // TODO: Match on any reserved bytes
-    if (this.handshakeMessage().equals(data)) {
-      console.debug("Received handshake");
-      this.state = PeerState.HandshakeCompleted;
-      return;
+    if (this.state == PeerState.Connected) {
+      const expectedHandshake = new Handshake(this.infoHash, this.id);
+
+      if (expectedHandshake.matches(data)) {
+        console.debug("Received handshake");
+        this.state = PeerState.HandshakeCompleted;
+        return;
+      }
     }
 
     const message = new Message(data);
@@ -93,17 +101,5 @@ export class Peer {
       request.writeUInt32BE(256, 13);
       this.connection.write(request);
     }
-  }
-
-  private handshakeMessage() {
-    const handshakeHeader = Buffer.from(
-      "\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00"
-    );
-
-    return Buffer.concat([
-      handshakeHeader,
-      this.infoHash,
-      Buffer.from(this.peerId),
-    ]);
   }
 }
