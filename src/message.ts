@@ -11,7 +11,7 @@ export class Message {
   }
 
   body(): Buffer {
-    return this.data.slice(5);
+    return this.data.subarray(5);
   }
 
   type(): MessageType | null {
