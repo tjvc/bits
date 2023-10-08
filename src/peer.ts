@@ -25,12 +25,12 @@ export class Peer {
     infoHash: Buffer,
     id: Buffer,
     clientId: Buffer,
-    connection?: PeerConnection,
+    connection: PeerConnection = new PeerConnection(ip, port),
     state: PeerState = PeerState.Disconnected
   ) {
     this.ip = ip;
     this.port = port;
-    this.connection = connection || new PeerConnection(this.ip, this.port);
+    this.connection = connection;
     this.infoHash = infoHash;
     this.id = id;
     this.clientId = clientId;
