@@ -28,6 +28,12 @@ async function main() {
   );
 
   const peers = download.peers;
+  // const peer = peers.find(
+  //   (peer) => peer.ip.toString() == "<ip-address>"
+  // );
+  // if (!peer) {
+  //   throw new Error("Peer not found");
+  // }
   const peer = peers[Math.floor(Math.random() * peers.length)];
   peer.connect();
 }
