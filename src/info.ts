@@ -32,4 +32,14 @@ export class Info {
   hash(): InfoHash {
     return new InfoHash(this.bencode());
   }
+
+  pieceLength(): number {
+    const pieceLength = this.info["piece length"];
+
+    if (typeof pieceLength === "number") {
+      return pieceLength;
+    } else {
+      throw new Error("Invalid piece length");
+    }
+  }
 }
