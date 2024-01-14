@@ -93,12 +93,12 @@ export class Peer {
       this.state = PeerState.Unchoked;
       console.debug("Requesting piece");
 
-      const request = Buffer.alloc(17);
-      request.writeUInt32BE(13);
-      request.writeUInt8(6, 4);
-      request.writeUInt32BE(32, 5);
-      request.writeUInt32BE(0, 9);
-      request.writeUInt32BE(256, 13);
+      const request = Buffer.alloc(17); // Allocate 17 byte buffer
+      request.writeUInt32BE(13); // Write length prefix
+      request.writeUInt8(6, 4); // Write message type (value, offset)
+      request.writeUInt32BE(32, 5); // Write piece index
+      request.writeUInt32BE(0, 9); // Write begin
+      request.writeUInt32BE(256, 13); // Write length (256 bytes)
       this.connection.write(request);
     }
   }
