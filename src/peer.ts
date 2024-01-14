@@ -18,6 +18,7 @@ export class Peer {
   state: PeerState;
   clientId: Buffer;
   bitfield: Buffer | null = null;
+  chunks: Buffer[] = [];
 
   constructor(
     ip: Buffer,
@@ -91,15 +92,30 @@ export class Peer {
     if (message.type() === MessageType.Unchoke) {
       console.debug("Received unchoke");
       this.state = PeerState.Unchoked;
-      console.debug("Requesting piece");
 
-      const request = Buffer.alloc(17); // Allocate 17 byte buffer
-      request.writeUInt32BE(13); // Write length prefix
-      request.writeUInt8(6, 4); // Write message type (value, offset)
-      request.writeUInt32BE(32, 5); // Write piece index
-      request.writeUInt32BE(0, 9); // Write begin
-      request.writeUInt32BE(256, 13); // Write length (256 bytes)
-      this.connection.write(request);
+      console.debug("Requesting piece");
+      this.requestChunk();
     }
+
+    if (message.type() === MessageType.Piece) {
+      console.debug("Received chunk");
+      this.chunks.push(message.body());
+
+      // 262144 / 16384 = 16 (piece length / chunk length)
+      if (this.chunks.length < 16) {
+        this.requestChunk();
+      }
+    }
+  }
+
+  requestChunk() {
+    console.debug("Requesting chunk");
+    const request = Buffer.alloc(17); // Allocate 17 byte buffer
+    request.writeUInt32BE(13); // Write length prefix
+    request.writeUInt8(6, 4); // Write message type (value, offset)
+    request.writeUInt32BE(32, 5); // Write piece index
+    request.writeUInt32BE(this.chunks.length * 256, 9); // Write begin (chunk index * chunk length)
+    request.writeUInt32BE(256, 13); // Write length (256 bytes)
+    this.connection.write(request);
   }
 }

@@ -1,6 +1,7 @@
 export enum MessageType {
   Unchoke = 1,
   Bitfield = 5,
+  Piece = 7,
 }
 
 export class Message {
