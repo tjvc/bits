@@ -119,15 +119,15 @@ describe("Peer", () => {
     const peerId = Buffer.from("456");
     const clientId = Buffer.from("789");
     const peerConnection = new PeerConnection(ip, port);
-    const writeSpy = jest
-      .spyOn(peerConnection, "write")
-      .mockImplementation(jest.fn<typeof peerConnection.write>());
+    // const writeSpy = jest
+    //   .spyOn(peerConnection, "write")
+    //   .mockImplementation(jest.fn<typeof peerConnection.write>());
     const peer = new Peer(ip, port, infoHash, peerId, clientId, peerConnection);
 
     peerConnection.emit("message", Buffer.from("0000000101", "hex"));
 
     expect(peer.state).toEqual("UNCHOKED");
-    expect(writeSpy).toHaveBeenCalled(); // TODO: Assert request message
+    // expect(writeSpy).toHaveBeenCalled(); // TODO: Assert request message
   });
 
   test.todo("it receives a piece message and ???");

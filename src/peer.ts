@@ -93,8 +93,8 @@ export class Peer {
       console.debug("Received unchoke");
       this.state = PeerState.Unchoked;
 
-      console.debug("Requesting piece");
-      this.requestChunk();
+      // console.debug("Requesting piece");
+      // this.requestChunk();
     }
 
     if (message.type() === MessageType.Piece) {
