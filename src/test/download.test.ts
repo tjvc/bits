@@ -82,4 +82,39 @@ describe("Download", () => {
     expect(mockedDownloads[1]).toHaveBeenCalled();
     expect(mockedDownloads[2]).not.toHaveBeenCalled();
   });
+
+  test("when a peer disconnects, it is moved to the back of the queue", async () => {
+    const mockPeerClass = class extends Peer {
+      download = () => {
+        this.emit("disconnect");
+        return;
+      };
+    };
+    const peers = [
+      {
+        ip: Buffer.from("192.168.2.1"),
+        port: 54321,
+        "peer id": Buffer.from("peerId"),
+      },
+      {
+        ip: Buffer.from("192.168.2.2"),
+        port: 54321,
+        "peer id": Buffer.from("peerId"),
+      },
+    ];
+    const download = new Download(
+      {
+        peers: peers,
+      },
+      Buffer.from("infoHash"),
+      Buffer.from("clientId"),
+      2,
+      mockPeerClass
+    );
+
+    download.start();
+
+    expect(download.peers[0].ip).toEqual(Buffer.from("192.168.2.2"));
+    expect(download.peers[1].ip).toEqual(Buffer.from("192.168.2.1"));
+  });
 });

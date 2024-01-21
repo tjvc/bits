@@ -29,6 +29,13 @@ export class Download {
         }
       });
     }
+
+    this.peers.forEach((peer) => {
+      peer.on("disconnect", () => {
+        this.peers.splice(this.peers.indexOf(peer), 1);
+        this.peers.push(peer);
+      });
+    });
   }
 
   start() {

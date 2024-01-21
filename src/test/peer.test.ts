@@ -23,6 +23,22 @@ describe("Peer", () => {
     expect(connectSpy).toHaveBeenCalled();
   });
 
+  test("emits a disconnect event when the connection is closed", async () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = Buffer.from("456");
+    const clientId = Buffer.from("789");
+    const peerConnection = new PeerConnection(ip, port);
+    const disconnectSpy = jest.fn();
+    const peer = new Peer(ip, port, infoHash, peerId, clientId, peerConnection);
+    peer.on("disconnect", disconnectSpy);
+
+    peerConnection.emit("close");
+
+    expect(disconnectSpy).toHaveBeenCalled();
+  });
+
   test("connects, updates state and sends handshake", async () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;

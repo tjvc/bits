@@ -1,6 +1,7 @@
 import { Handshake } from "./handshake";
 import { Message, MessageType } from "./message";
 import { PeerConnection } from "./peer_connection";
+import { EventEmitter } from "events";
 
 export enum PeerState {
   Disconnected = "DISCONNECTED",
@@ -9,7 +10,7 @@ export enum PeerState {
   Unchoked = "UNCHOKED",
 }
 
-export class Peer {
+export class Peer extends EventEmitter {
   ip: Buffer;
   port: number;
   id: Buffer;
@@ -29,6 +30,8 @@ export class Peer {
     connection: PeerConnection = new PeerConnection(ip, port),
     state: PeerState = PeerState.Disconnected
   ) {
+    super();
+
     this.ip = ip;
     this.port = port;
     this.connection = connection;
@@ -50,6 +53,7 @@ export class Peer {
     this.connection.on("close", () => {
       this.state = PeerState.Disconnected;
       console.debug("Connection closed by peer");
+      this.emit("disconnect");
     });
   }
 
