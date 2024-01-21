@@ -90,7 +90,7 @@ describe("Peer", () => {
     const peerId = Buffer.from("456");
     const clientId = Buffer.from("789");
     const peerConnection = new PeerConnection(ip, port);
-    const writeSpy = jest
+    const closeSpy = jest
       .spyOn(peerConnection, "close")
       .mockImplementation(jest.fn<typeof peerConnection.close>());
     const peer = new Peer(ip, port, infoHash, peerId, clientId, peerConnection);
@@ -98,7 +98,7 @@ describe("Peer", () => {
     // Bitfield message
     peerConnection.emit("message", Buffer.from("0000092f05ffffffff", "hex"));
 
-    expect(writeSpy).toHaveBeenCalled();
+    expect(closeSpy).toHaveBeenCalled();
     expect(peer.state).toEqual("DISCONNECTED");
   });
 
