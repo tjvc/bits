@@ -3,8 +3,16 @@ import { Peer } from "./peer";
 
 export class Download {
   peers: Peer[] = [];
+  private maxDownloaders: number;
 
-  constructor(data: BDecoded, infoHash: Buffer, clientId: Buffer) {
+  constructor(
+    data: BDecoded,
+    infoHash: Buffer,
+    clientId: Buffer,
+    maxDownloaders = 3
+  ) {
+    this.maxDownloaders = maxDownloaders;
+
     if (this.isBDict(data) && this.isBList(data.peers)) {
       data.peers.forEach((peer: BDecoded) => {
         if (this.isPeer(peer)) {
@@ -14,6 +22,17 @@ export class Download {
         }
       });
     }
+  }
+
+  start() {
+    let count = 0;
+
+    this.peers.forEach((peer) => {
+      if (count < this.maxDownloaders) {
+        peer.download();
+        count++;
+      }
+    });
   }
 
   private isBDict(data: BDecoded): data is BDict {

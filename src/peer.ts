@@ -57,6 +57,10 @@ export class Peer {
     this.connection.connect();
   }
 
+  download() {
+    this.connect();
+  }
+
   sendHandshake() {
     console.debug("Sending handshake");
     const handshake = new Handshake(this.infoHash, this.clientId);
