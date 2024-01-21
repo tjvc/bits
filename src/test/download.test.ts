@@ -2,16 +2,7 @@ import { beforeEach, describe, expect, jest, test } from "@jest/globals";
 import { Download } from "../download";
 import { Peer } from "../peer";
 
-jest.mock("../peer");
-
 describe("Download", () => {
-  let mockMethods: jest.Mock[];
-
-  beforeEach(() => {
-    (Peer as jest.Mock).mockClear();
-    mockMethods = [];
-  });
-
   test("initialises valid peers", async () => {
     const peer = {
       ip: Buffer.from("192.168.2.1"),
@@ -26,7 +17,7 @@ describe("Download", () => {
       Buffer.from("clientId")
     );
 
-    expect(download.peers.length).toEqual(1);
+    expect(download.peers[0].ip).toEqual(peer.ip);
   });
 
   test("does not initialise invalid peers", async () => {
@@ -49,13 +40,15 @@ describe("Download", () => {
   });
 
   test("it starts downloading from multiple peers up to the maximum", async () => {
-    (Peer as jest.Mock).mockImplementation(() => {
-      const mockMethod = jest.fn();
-      mockMethods.push(mockMethod);
-      return {
-        download: mockMethod,
-      };
-    });
+    const mockedDownloads: jest.Mock[] = [];
+    const mockPeerClass = class extends Peer {
+      constructor(...args: ConstructorParameters<typeof Peer>) {
+        super(...args);
+        const mockedDownload = jest.fn();
+        mockedDownloads.push(mockedDownload);
+        this.download = mockedDownload;
+      }
+    };
     const peers = [
       {
         ip: Buffer.from("192.168.2.1"),
@@ -79,13 +72,14 @@ describe("Download", () => {
       },
       Buffer.from("infoHash"),
       Buffer.from("clientId"),
-      2
+      2,
+      mockPeerClass
     );
 
     download.start();
 
-    expect(mockMethods[0]).toHaveBeenCalled();
-    expect(mockMethods[1]).toHaveBeenCalled();
-    expect(mockMethods[2]).not.toHaveBeenCalled();
+    expect(mockedDownloads[0]).toHaveBeenCalled();
+    expect(mockedDownloads[1]).toHaveBeenCalled();
+    expect(mockedDownloads[2]).not.toHaveBeenCalled();
   });
 });

@@ -9,7 +9,8 @@ export class Download {
     data: BDecoded,
     infoHash: Buffer,
     clientId: Buffer,
-    maxDownloaders = 3
+    maxDownloaders = 3,
+    peerClass = Peer
   ) {
     this.maxDownloaders = maxDownloaders;
 
@@ -17,7 +18,13 @@ export class Download {
       data.peers.forEach((peer: BDecoded) => {
         if (this.isPeer(peer)) {
           this.peers.push(
-            new Peer(peer.ip, peer.port, infoHash, peer["peer id"], clientId)
+            new peerClass(
+              peer.ip,
+              peer.port,
+              infoHash,
+              peer["peer id"],
+              clientId
+            )
           );
         }
       });
