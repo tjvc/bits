@@ -117,4 +117,8 @@ describe("Download", () => {
     expect(download.peers[0].ip).toEqual(Buffer.from("192.168.2.2"));
     expect(download.peers[1].ip).toEqual(Buffer.from("192.168.2.1"));
   });
+
+  test.todo(
+    "it periodically starts downloading from new peers when the maximum is not reached"
+  );
 });
