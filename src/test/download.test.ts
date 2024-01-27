@@ -40,85 +40,58 @@ describe("Download", () => {
   });
 
   test("it starts downloading from multiple peers up to the maximum", async () => {
-    const mockedDownloads: jest.Mock[] = [];
-    const mockPeerClass = class extends Peer {
-      constructor(...args: ConstructorParameters<typeof Peer>) {
-        super(...args);
-        const mockedDownload = jest.fn();
-        mockedDownloads.push(mockedDownload);
-        this.download = mockedDownload;
-      }
-    };
-    const peers = [
-      {
-        ip: Buffer.from("192.168.2.1"),
-        port: 54321,
-        "peer id": Buffer.from("peerId"),
-      },
-      {
-        ip: Buffer.from("192.168.2.2"),
-        port: 54321,
-        "peer id": Buffer.from("peerId"),
-      },
-      {
-        ip: Buffer.from("192.168.2.3"),
-        port: 54321,
-        "peer id": Buffer.from("peerId"),
-      },
-    ];
+    const firstPeer = buildMockPeer();
+    const secondPeer = buildMockPeer();
+    const thirdPeer = buildMockPeer();
     const download = new Download(
-      {
-        peers: peers,
-      },
+      {},
       Buffer.from("infoHash"),
       Buffer.from("clientId"),
       2,
-      mockPeerClass
+      [firstPeer, secondPeer, thirdPeer]
     );
 
     download.start();
 
-    expect(mockedDownloads[0]).toHaveBeenCalled();
-    expect(mockedDownloads[1]).toHaveBeenCalled();
-    expect(mockedDownloads[2]).not.toHaveBeenCalled();
+    expect(firstPeer.download).toHaveBeenCalled();
+    expect(secondPeer.download).toHaveBeenCalled();
+    expect(thirdPeer.download).not.toHaveBeenCalled();
   });
 
   test("when a peer disconnects, it is moved to the back of the queue", async () => {
-    const mockPeerClass = class extends Peer {
-      download = () => {
-        this.emit("disconnect");
-        return;
-      };
-    };
-    const peers = [
-      {
-        ip: Buffer.from("192.168.2.1"),
-        port: 54321,
-        "peer id": Buffer.from("peerId"),
-      },
-      {
-        ip: Buffer.from("192.168.2.2"),
-        port: 54321,
-        "peer id": Buffer.from("peerId"),
-      },
-    ];
+    const firstPeer = buildMockPeer(function (this: Peer) {
+      this.emit("disconnect");
+    });
+    const secondPeer = buildMockPeer();
     const download = new Download(
-      {
-        peers: peers,
-      },
+      {},
       Buffer.from("infoHash"),
       Buffer.from("clientId"),
       2,
-      mockPeerClass
+      [firstPeer, secondPeer]
     );
 
     download.start();
 
-    expect(download.peers[0].ip).toEqual(Buffer.from("192.168.2.2"));
-    expect(download.peers[1].ip).toEqual(Buffer.from("192.168.2.1"));
+    expect(download.peers[0]).toEqual(secondPeer);
+    expect(download.peers[1]).toEqual(firstPeer);
   });
 
   test.todo(
     "it periodically starts downloading from new peers when the maximum is not reached"
   );
+
+  function buildMockPeer(downloadMock: () => void = jest.fn()) {
+    const mockPeer = class extends Peer {
+      download = downloadMock;
+    };
+
+    return new mockPeer(
+      Buffer.from("192.168.2.1"),
+      54321,
+      Buffer.from("infoHash"),
+      Buffer.from("clientId"),
+      Buffer.from("id")
+    );
+  }
 });
