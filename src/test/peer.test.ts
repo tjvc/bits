@@ -133,19 +133,21 @@ describe("Peer", () => {
       peerConnection
     );
 
-    // Bitfield message
-    peerConnection.emit("message", Buffer.from("0000092f05ffffffff", "hex"));
+    // 4-byte length prefix, 1-byte message type, bitfield
+    peerConnection.emit("message", Buffer.from("0000000505ffffffff", "hex"));
 
     expect(closeSpy).toHaveBeenCalled();
     expect(peer.state).toEqual("DISCONNECTED");
   });
 
-  test("receives a bitfield message, sets the bitfield and sends an interested message", async () => {
+  test("receives a bitfield message, sets the bitfield and sends an interested message if the peer has required pieces", async () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
     const peerId = Buffer.from("456");
     const clientId = Buffer.from("789");
+    // TODO: Make pieces match bitfield
+    const pieces: PieceState[] = [];
     const peerConnection = new PeerConnection(ip, port);
     const writeSpy = jest
       .spyOn(peerConnection, "write")
@@ -161,11 +163,16 @@ describe("Peer", () => {
       PeerState.HandshakeCompleted
     );
 
-    peerConnection.emit("message", Buffer.from("0000092f05ffffffff", "hex"));
+    // 4-byte length prefix, 1-byte message type, bitfield
+    peerConnection.emit("message", Buffer.from("0000000505ffffffff", "hex"));
 
     expect(peer.bitfield).toEqual(Buffer.from("ffffffff", "hex"));
     expect(writeSpy).toHaveBeenCalledWith(Buffer.from([0, 0, 0, 1, 2]));
   });
+
+  test.todo(
+    "it receives a bitfield message and closes the connection if the peer does not have required pieces"
+  );
 
   test("it receives an unchoke message and updates its state", async () => {
     const ip = Buffer.from("127.0.0.1");
@@ -190,14 +197,15 @@ describe("Peer", () => {
     expect(peer.state).toEqual("UNCHOKED");
   });
 
-  test("when unchoked, it sends a request message for a required piece, updates its state and marks the piece as downloading", async () => {
+  test("when unchoked, it sends a request message for a required piece offered by the peer, updates its state and marks the piece as downloading", async () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
     const peerId = Buffer.from("456");
     const clientId = Buffer.from("789");
-    const pieces = [1, 0];
+    const pieces = [1, 0, 0];
     const peerConnection = new PeerConnection(ip, port);
+    const bitfield = Buffer.from([32]); // 0010 0000
     const writeSpy = jest
       .spyOn(peerConnection, "write")
       .mockImplementation(jest.fn<typeof peerConnection.write>());
@@ -208,14 +216,16 @@ describe("Peer", () => {
       peerId,
       clientId,
       pieces,
-      peerConnection
+      peerConnection,
+      undefined,
+      bitfield
     );
 
     peerConnection.emit("message", Buffer.from("0000000101", "hex"));
 
-    expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1));
+    expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(2));
     expect(peer.state).toEqual("DOWNLOADING");
-    expect(pieces[1]).toEqual(PieceState.Downloading);
+    expect(pieces[2]).toEqual(PieceState.Downloading);
   });
 
   test.todo(
@@ -224,6 +234,10 @@ describe("Peer", () => {
 
   test.todo(
     "when it fails to download a complete piece, it marks it as not downloaded"
+  );
+
+  test.todo(
+    "when it finishes downloading a piece and there are no more required pieces, it closes the connection"
   );
 
   function buildPieceMessage(pieceIndex: number) {

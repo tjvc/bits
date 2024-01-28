@@ -38,7 +38,8 @@ export class Peer extends EventEmitter {
     clientId: Buffer,
     pieces: PieceState[],
     connection: PeerConnection = new PeerConnection(ip, port),
-    state: PeerState = PeerState.Disconnected
+    state: PeerState = PeerState.Disconnected,
+    bitfield: Buffer | null = null
   ) {
     super();
 
@@ -50,6 +51,7 @@ export class Peer extends EventEmitter {
     this.clientId = clientId;
     this.state = state;
     this.pieces = pieces;
+    this.bitfield = bitfield;
 
     this.connection.on("message", (data) => {
       this.receive(data);
