@@ -14,7 +14,8 @@ describe("Download", () => {
         peers: [peer],
       },
       Buffer.from("infoHash"),
-      Buffer.from("clientId")
+      Buffer.from("clientId"),
+      0
     );
 
     expect(download.peers[0].ip).toEqual(peer.ip);
@@ -26,7 +27,8 @@ describe("Download", () => {
         peers: [{ ip: Buffer.from("192.168.2.1") }],
       },
       Buffer.from("infoHash"),
-      Buffer.from("clientId")
+      Buffer.from("clientId"),
+      0
     );
 
     expect(download.peers).toEqual([]);
@@ -35,7 +37,7 @@ describe("Download", () => {
   test("does not error when initialised with unexpected data types", async () => {
     const data = Buffer.from("test");
     expect(() => {
-      new Download(data, Buffer.from("infoHash"), Buffer.from("clientId"));
+      new Download(data, Buffer.from("infoHash"), Buffer.from("clientId"), 0);
     }).not.toThrow();
   });
 
@@ -47,6 +49,7 @@ describe("Download", () => {
       {},
       Buffer.from("infoHash"),
       Buffer.from("clientId"),
+      0,
       2,
       [firstPeer, secondPeer, thirdPeer]
     );
@@ -67,6 +70,7 @@ describe("Download", () => {
       {},
       Buffer.from("infoHash"),
       Buffer.from("clientId"),
+      0,
       2,
       [firstPeer, secondPeer]
     );
@@ -92,8 +96,9 @@ describe("Download", () => {
       Buffer.from("192.168.2.1"),
       54321,
       Buffer.from("infoHash"),
+      Buffer.from("id"),
       Buffer.from("clientId"),
-      Buffer.from("id")
+      []
     );
   }
 });

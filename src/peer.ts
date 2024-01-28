@@ -8,6 +8,13 @@ export enum PeerState {
   Connected = "CONNECTED",
   HandshakeCompleted = "HANDSHAKE_COMPLETED",
   Unchoked = "UNCHOKED",
+  Downloading = "DOWNLOADING",
+}
+
+export enum PieceState {
+  Required = 0,
+  Downloading = 1,
+  Downloaded = 2,
 }
 
 export class Peer extends EventEmitter {
@@ -20,6 +27,8 @@ export class Peer extends EventEmitter {
   clientId: Buffer;
   bitfield: Buffer | null = null;
   chunks: Buffer[] = [];
+  pieces: PieceState[];
+  currentPiece: number | null = null;
 
   constructor(
     ip: Buffer,
@@ -27,6 +36,7 @@ export class Peer extends EventEmitter {
     infoHash: Buffer,
     id: Buffer,
     clientId: Buffer,
+    pieces: PieceState[],
     connection: PeerConnection = new PeerConnection(ip, port),
     state: PeerState = PeerState.Disconnected
   ) {
@@ -39,6 +49,7 @@ export class Peer extends EventEmitter {
     this.id = id;
     this.clientId = clientId;
     this.state = state;
+    this.pieces = pieces;
 
     this.connection.on("message", (data) => {
       this.receive(data);
@@ -101,8 +112,15 @@ export class Peer extends EventEmitter {
       console.debug("Received unchoke");
       this.state = PeerState.Unchoked;
 
-      // console.debug("Requesting piece");
-      // this.requestChunk();
+      this.currentPiece = this.pieces.findIndex(
+        (piece) => piece === PieceState.Required
+      );
+      if (this.currentPiece > -1) {
+        console.debug("Requesting piece", this.currentPiece);
+        this.requestPieceChunk(this.currentPiece);
+        this.state = PeerState.Downloading;
+        this.pieces[this.currentPiece] = PieceState.Downloading;
+      }
     }
 
     if (message.type() === MessageType.Piece) {
@@ -110,20 +128,20 @@ export class Peer extends EventEmitter {
       this.chunks.push(message.body());
 
       // 262144 / 16384 = 16 (piece length / chunk length)
-      if (this.chunks.length < 16) {
-        this.requestChunk();
+      if (this.chunks.length < 16 && this.currentPiece != null) {
+        this.requestPieceChunk(this.currentPiece);
       }
     }
   }
 
-  requestChunk() {
+  requestPieceChunk(pieceIndex: number) {
     console.debug("Requesting chunk");
     const request = Buffer.alloc(17); // Allocate 17 byte buffer
-    request.writeUInt32BE(13); // Write length prefix
+    request.writeUInt32BE(13); // Write length prefix (does not include length itself)
     request.writeUInt8(6, 4); // Write message type (value, offset)
-    request.writeUInt32BE(32, 5); // Write piece index
-    request.writeUInt32BE(this.chunks.length * 256, 9); // Write begin (chunk index * chunk length)
-    request.writeUInt32BE(256, 13); // Write length (256 bytes)
+    request.writeUInt32BE(pieceIndex, 5); // Write piece index
+    request.writeUInt32BE(this.chunks.length * 16384, 9); // Write begin (chunk index * chunk length)
+    request.writeUInt32BE(16384, 13); // Write length (16 KB)
     this.connection.write(request);
   }
 }

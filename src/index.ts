@@ -24,7 +24,8 @@ async function main() {
   const download = new Download(
     new BData(trackerResponse).decode(),
     infoHash.raw,
-    Buffer.from(peerId)
+    Buffer.from(peerId),
+    torrent.info().pieceCount()
   );
 
   download.start();

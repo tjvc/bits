@@ -42,4 +42,14 @@ export class Info {
       throw new Error("Invalid piece length");
     }
   }
+
+  pieceCount(): number {
+    const pieces = this.info.pieces;
+
+    if (Buffer.isBuffer(pieces)) {
+      return pieces.length / 20;
+    } else {
+      throw new Error("Invalid pieces");
+    }
+  }
 }

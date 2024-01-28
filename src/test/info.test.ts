@@ -16,4 +16,24 @@ describe("Info", () => {
       Buffer.from("d6:lengthi2e4:name4:yolo12:piece lengthi1e6:pieces2:abe")
     );
   });
+
+  test("it returns the piece count", async () => {
+    const infoDict = {
+      pieces: Buffer.from("aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb"),
+    };
+
+    const info = new Info(infoDict);
+
+    expect(info.pieceCount()).toEqual(2);
+  });
+
+  test("it throws an error when the piece count is invalid", async () => {
+    const infoDict = {};
+
+    const info = new Info(infoDict);
+
+    expect(() => {
+      info.pieceCount();
+    }).toThrow("Invalid pieces");
+  });
 });

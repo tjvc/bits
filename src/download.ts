@@ -1,25 +1,35 @@
 import { BDecoded, BDict, BList } from "./b_data";
-import { Peer } from "./peer";
+import { Peer, PieceState } from "./peer";
 
 export class Download {
   peers: Peer[];
+  pieces: PieceState[];
   private maxDownloaders: number;
 
   constructor(
     data: BDecoded,
     infoHash: Buffer,
     clientId: Buffer,
+    pieceCount: number,
     maxDownloaders = 3,
     peers: Peer[] = []
   ) {
     this.maxDownloaders = maxDownloaders;
     this.peers = peers;
+    this.pieces = Array(pieceCount).fill(0);
 
     if (this.isBDict(data) && this.isBList(data.peers)) {
       data.peers.forEach((peer: BDecoded) => {
         if (this.isPeer(peer)) {
           this.peers.push(
-            new Peer(peer.ip, peer.port, infoHash, peer["peer id"], clientId)
+            new Peer(
+              peer.ip,
+              peer.port,
+              infoHash,
+              peer["peer id"],
+              clientId,
+              this.pieces
+            )
           );
         }
       });
