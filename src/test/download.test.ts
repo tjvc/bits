@@ -78,8 +78,10 @@ describe("Download", () => {
   });
 
   test.todo(
-    "it periodically starts downloading from new peers when the maximum is not reached"
+    "it periodically starts downloading from new or inactive peers when the maximum is not reached"
   );
+
+  test.todo("it periodically refetches peers from the tracker");
 
   function buildMockPeer(downloadMock: () => void = jest.fn()) {
     const mockPeer = class extends Peer {

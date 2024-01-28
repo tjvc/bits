@@ -128,7 +128,7 @@ describe("Peer", () => {
     expect(writeSpy).toHaveBeenCalledWith(Buffer.from([0, 0, 0, 1, 2]));
   });
 
-  test("it receives an unchoke message, updates the connection state and sends a request message", async () => {
+  test("it receives an unchoke message and updates its state", async () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
     const infoHash = Buffer.from("123");
@@ -146,7 +146,13 @@ describe("Peer", () => {
     // expect(writeSpy).toHaveBeenCalled(); // TODO: Assert request message
   });
 
-  test.todo("it receives a piece message and ???");
+  test.todo(
+    "it downloads a complete piece, marks it as downloaded and requests the next piece"
+  );
+
+  test.todo(
+    "when it fails to download a complete piece, it marks it as not downloaded"
+  );
 
   // TODO: Invalid messages (no length, no type, etc.)
   // TODO: Out of order messages
