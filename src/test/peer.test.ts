@@ -4,6 +4,7 @@ import { Handshake } from "../handshake";
 import { Peer } from "../peer";
 import { PeerConnection } from "../peer_connection";
 import { PeerState, PieceState } from "../peer";
+import { Bitfield } from "../bitfield";
 
 describe("Peer", () => {
   test("opens a TCP connection", async () => {
@@ -166,7 +167,7 @@ describe("Peer", () => {
     // 4-byte length prefix, 1-byte message type, bitfield
     peerConnection.emit("message", Buffer.from("0000000505ffffffff", "hex"));
 
-    expect(peer.bitfield).toEqual(Buffer.from("ffffffff", "hex"));
+    expect(peer.bitfield).toEqual(new Bitfield(Buffer.from("ffffffff", "hex")));
     expect(writeSpy).toHaveBeenCalledWith(Buffer.from([0, 0, 0, 1, 2]));
   });
 
@@ -205,7 +206,7 @@ describe("Peer", () => {
     const clientId = Buffer.from("789");
     const pieces = [1, 0, 0];
     const peerConnection = new PeerConnection(ip, port);
-    const bitfield = Buffer.from([32]); // 0010 0000
+    const bitfield = new Bitfield(Buffer.from([32])); // 00100000
     const writeSpy = jest
       .spyOn(peerConnection, "write")
       .mockImplementation(jest.fn<typeof peerConnection.write>());

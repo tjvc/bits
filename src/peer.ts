@@ -2,6 +2,7 @@ import { Handshake } from "./handshake";
 import { Message, MessageType } from "./message";
 import { PeerConnection } from "./peer_connection";
 import { EventEmitter } from "events";
+import { Bitfield } from "./bitfield";
 
 export enum PeerState {
   Disconnected = "DISCONNECTED",
@@ -25,7 +26,7 @@ export class Peer extends EventEmitter {
   connection: PeerConnection;
   state: PeerState;
   clientId: Buffer;
-  bitfield: Buffer | null = null;
+  bitfield: Bitfield | null = null;
   chunks: Buffer[] = [];
   pieces: PieceState[];
   currentPiece: number | null = null;
@@ -39,7 +40,7 @@ export class Peer extends EventEmitter {
     pieces: PieceState[],
     connection: PeerConnection = new PeerConnection(ip, port),
     state: PeerState = PeerState.Disconnected,
-    bitfield: Buffer | null = null
+    bitfield: Bitfield | null = null
   ) {
     super();
 
@@ -105,7 +106,7 @@ export class Peer extends EventEmitter {
         console.debug("Connection closed");
         return;
       }
-      this.bitfield = message.body();
+      this.bitfield = new Bitfield(message.body());
       console.debug("Sending interested");
       this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
     }
@@ -115,7 +116,8 @@ export class Peer extends EventEmitter {
       this.state = PeerState.Unchoked;
 
       this.currentPiece = this.pieces.findIndex(
-        (piece) => piece === PieceState.Required
+        (piece, index) =>
+          piece === PieceState.Required && this.bitfield?.get(index)
       );
       if (this.currentPiece > -1) {
         console.debug("Requesting piece", this.currentPiece);
