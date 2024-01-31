@@ -7,6 +7,21 @@ import { PeerState, PieceState } from "../peer";
 import { Bitfield } from "../bitfield";
 
 describe("Peer", () => {
+  test("initialises a connection with the peer's IP and port", async () => {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+    const infoHash = Buffer.from("123");
+    const peerId = Buffer.from("456");
+    const clientId = Buffer.from("789");
+    const pieces: PieceState[] = [];
+    const peer = new Peer(ip, port, infoHash, peerId, clientId, pieces);
+
+    const connection = peer.connection;
+
+    expect(connection.ip).toEqual(ip);
+    expect(connection.port).toEqual(port);
+  });
+
   test("opens a TCP connection", async () => {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
