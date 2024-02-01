@@ -7,28 +7,16 @@ import { Bitfield } from "../bitfield";
 
 describe("Peer", () => {
   test("initialises a connection with the peer's IP and port", async () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = Buffer.from("456");
-    const clientId = Buffer.from("789");
-    const pieces: PieceState[] = [];
-    const peer = new Peer(ip, port, infoHash, peerId, clientId, pieces);
+    const peer = buildPeer();
 
     const connection = peer.connection;
 
-    expect(connection.ip).toEqual(ip);
-    expect(connection.port).toEqual(port);
+    expect(connection.ip).toEqual(peer.ip);
+    expect(connection.port).toEqual(peer.port);
   });
 
   test("opens a TCP connection", async () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = Buffer.from("456");
-    const clientId = Buffer.from("789");
-    const pieces: PieceState[] = [];
-    const peer = new Peer(ip, port, infoHash, peerId, clientId, pieces);
+    const peer = buildPeer();
     const connection = peer.connection;
     const connectSpy = jest
       .spyOn(connection, "connect")
@@ -40,14 +28,8 @@ describe("Peer", () => {
   });
 
   test("emits a disconnect event when the connection is closed", async () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = Buffer.from("456");
-    const clientId = Buffer.from("789");
-    const pieces: PieceState[] = [];
     const disconnectSpy = jest.fn();
-    const peer = new Peer(ip, port, infoHash, peerId, clientId, pieces);
+    const peer = buildPeer();
     peer.on("disconnect", disconnectSpy);
 
     peer.connection.emit("close");
@@ -56,13 +38,10 @@ describe("Peer", () => {
   });
 
   test("connects, updates state and sends handshake", async () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = Buffer.from("456");
-    const clientId = Buffer.from("789");
-    const pieces: PieceState[] = [];
-    const peer = new Peer(ip, port, infoHash, peerId, clientId, pieces);
+    const peer = buildPeer({
+      infoHash: Buffer.from("123"),
+      clientId: Buffer.from("789"),
+    });
     const connection = peer.connection;
     const writeSpy = jest
       .spyOn(connection, "write")
@@ -79,35 +58,18 @@ describe("Peer", () => {
   });
 
   test("receives handshake message and updates state", () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.alloc(20, 1);
-    const peerId = Buffer.alloc(20, 2);
-    const clientId = Buffer.alloc(20, 3);
-    const pieces: PieceState[] = [];
-    const peer = new Peer(
-      ip,
-      port,
-      infoHash,
-      peerId,
-      clientId,
-      pieces,
-      PeerState.Connected
-    );
+    const peer = buildPeer({ state: PeerState.Connected });
 
-    peer.connection.emit("message", new Handshake(infoHash, peerId).data());
+    peer.connection.emit(
+      "message",
+      new Handshake(peer.infoHash, peer.id).data()
+    );
 
     expect(peer.state).toEqual("HANDSHAKE_COMPLETED");
   });
 
   test("closes connection if another message is received before successful handshake", () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = Buffer.from("456");
-    const clientId = Buffer.from("789");
-    const pieces: PieceState[] = [];
-    const peer = new Peer(ip, port, infoHash, peerId, clientId, pieces);
+    const peer = buildPeer();
     const connection = peer.connection;
     const closeSpy = jest
       .spyOn(connection, "close")
@@ -121,22 +83,8 @@ describe("Peer", () => {
   });
 
   test("receives a bitfield message, sets the bitfield and sends an interested message if the peer has required pieces", async () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = Buffer.from("456");
-    const clientId = Buffer.from("789");
     // TODO: Make pieces match bitfield
-    const pieces: PieceState[] = [];
-    const peer = new Peer(
-      ip,
-      port,
-      infoHash,
-      peerId,
-      clientId,
-      pieces,
-      PeerState.HandshakeCompleted
-    );
+    const peer = buildPeer({ state: PeerState.HandshakeCompleted });
     const connection = peer.connection;
     const writeSpy = jest
       .spyOn(connection, "write")
@@ -154,13 +102,7 @@ describe("Peer", () => {
   );
 
   test("it receives an unchoke message and updates its state", async () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = Buffer.from("456");
-    const clientId = Buffer.from("789");
-    const pieces: PieceState[] = [];
-    const peer = new Peer(ip, port, infoHash, peerId, clientId, pieces);
+    const peer = buildPeer();
     const connection = peer.connection;
 
     connection.emit("message", Buffer.from("0000000101", "hex"));
@@ -169,23 +111,9 @@ describe("Peer", () => {
   });
 
   test("when unchoked, it sends a request message for a required piece offered by the peer, updates its state and marks the piece as downloading", async () => {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
-    const infoHash = Buffer.from("123");
-    const peerId = Buffer.from("456");
-    const clientId = Buffer.from("789");
     const pieces = [1, 0, 0];
     const bitfield = new Bitfield(Buffer.from([32])); // 00100000
-    const peer = new Peer(
-      ip,
-      port,
-      infoHash,
-      peerId,
-      clientId,
-      pieces,
-      undefined,
-      bitfield
-    );
+    const peer = buildPeer({ pieces, bitfield });
     const connection = peer.connection;
     const writeSpy = jest
       .spyOn(connection, "write")
@@ -209,6 +137,38 @@ describe("Peer", () => {
   test.todo(
     "when it finishes downloading a piece and there are no more required pieces, it closes the connection"
   );
+
+  function buildPeer({
+    infoHash = Buffer.alloc(20, 1),
+    peerId = Buffer.alloc(20, 2),
+    clientId = Buffer.alloc(20, 3),
+    state = PeerState.Disconnected,
+    pieces = [],
+    bitfield = new Bitfield(Buffer.alloc(0)),
+  }: {
+    infoHash?: Buffer;
+    peerId?: Buffer;
+    clientId?: Buffer;
+    state?: PeerState;
+    pieces?: PieceState[];
+    bitfield?: Bitfield;
+  } = {}): Peer {
+    const ip = Buffer.from("127.0.0.1");
+    const port = 54321;
+
+    const peer = new Peer(
+      ip,
+      port,
+      infoHash,
+      peerId,
+      clientId,
+      pieces,
+      state,
+      bitfield
+    );
+
+    return peer;
+  }
 
   function buildPieceMessage(pieceIndex: number) {
     const message = Buffer.alloc(17); // Allocate 17 byte buffer
