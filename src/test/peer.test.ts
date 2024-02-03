@@ -83,8 +83,10 @@ describe("Peer", () => {
   });
 
   test("receives a bitfield message, sets the bitfield and sends an interested message if the peer has required pieces", async () => {
-    // TODO: Make pieces match bitfield
-    const peer = buildPeer({ state: PeerState.HandshakeCompleted });
+    const peer = buildPeer({
+      pieces: [0],
+      state: PeerState.HandshakeCompleted,
+    });
     const connection = peer.connection;
     const writeSpy = jest
       .spyOn(connection, "write")
@@ -97,9 +99,22 @@ describe("Peer", () => {
     expect(writeSpy).toHaveBeenCalledWith(Buffer.from([0, 0, 0, 1, 2]));
   });
 
-  test.todo(
-    "it receives a bitfield message and closes the connection if the peer does not have required pieces"
-  );
+  test("receives a bitfield message, sets the bitfield and closes the connection if the peer does not have required pieces", async () => {
+    const peer = buildPeer({
+      pieces: [0],
+      state: PeerState.HandshakeCompleted,
+    });
+    const connection = peer.connection;
+    const closeSpy = jest
+      .spyOn(connection, "close")
+      .mockImplementation(jest.fn<typeof connection.close>());
+
+    // 4-byte length prefix, 1-byte message type, bitfield
+    connection.emit("message", Buffer.from("000000050500", "hex"));
+
+    expect(peer.bitfield).toEqual(new Bitfield(Buffer.from([0])));
+    expect(closeSpy).toHaveBeenCalled();
+  });
 
   test("it receives an unchoke message and updates its state", async () => {
     const peer = buildPeer();

@@ -105,20 +105,24 @@ export class Peer extends EventEmitter {
         console.debug("Connection closed");
         return;
       }
+
       this.bitfield = new Bitfield(message.body());
-      console.debug("Sending interested");
-      this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
+
+      if (this.nextPiece() != null) {
+        console.debug("Sending interested");
+        this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
+      } else {
+        this.connection.close();
+        console.debug("Connection closed");
+      }
     }
 
     if (message.type() === MessageType.Unchoke) {
       console.debug("Received unchoke");
       this.state = PeerState.Unchoked;
 
-      this.currentPiece = this.pieces.findIndex(
-        (piece, index) =>
-          piece === PieceState.Required && this.bitfield?.get(index)
-      );
-      if (this.currentPiece > -1) {
+      this.currentPiece = this.nextPiece();
+      if (this.currentPiece != null) {
         console.debug("Requesting piece", this.currentPiece);
         this.requestPieceChunk(this.currentPiece);
         this.state = PeerState.Downloading;
@@ -146,5 +150,13 @@ export class Peer extends EventEmitter {
     request.writeUInt32BE(this.chunks.length * 16384, 9); // Write begin (chunk index * chunk length)
     request.writeUInt32BE(16384, 13); // Write length (16 KB)
     this.connection.write(request);
+  }
+
+  nextPiece() {
+    const index = this.pieces.findIndex(
+      (piece, index) =>
+        piece === PieceState.Required && this.bitfield?.get(index)
+    );
+    return index > -1 ? index : null;
   }
 }
