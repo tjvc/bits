@@ -27,14 +27,15 @@ describe("Peer", () => {
     expect(connectSpy).toHaveBeenCalled();
   });
 
-  test("emits a disconnect event when the connection is closed", async () => {
+  test("emits a disconnect event and updates the state when the connection is closed", async () => {
     const disconnectSpy = jest.fn();
-    const peer = buildPeer();
+    const peer = buildPeer({ state: PeerState.Connected });
     peer.on("disconnect", disconnectSpy);
 
     peer.connection.emit("close");
 
     expect(disconnectSpy).toHaveBeenCalled();
+    expect(peer.state).toEqual("DISCONNECTED");
   });
 
   test("connects, updates state and sends handshake", async () => {
@@ -79,7 +80,6 @@ describe("Peer", () => {
     connection.emit("message", Buffer.from("0000000505ffffffff", "hex"));
 
     expect(closeSpy).toHaveBeenCalled();
-    expect(peer.state).toEqual("DISCONNECTED");
   });
 
   test("receives a bitfield message, sets the bitfield and sends an interested message if the peer has required pieces", async () => {
