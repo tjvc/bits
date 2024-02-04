@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { Bitfield } from "../bitfield";
+import { Bitfield } from "./bitfield";
 
 describe("Bitfield", () => {
   test("returns correct bit values", () => {

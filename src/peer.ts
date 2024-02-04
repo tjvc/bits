@@ -2,7 +2,7 @@ import { Handshake } from "./handshake";
 import { Message, MessageType } from "./message";
 import { PeerConnection } from "./peer_connection";
 import { EventEmitter } from "events";
-import { Bitfield } from "./bitfield";
+import Bitfield from "bitfield";
 
 export enum PeerState {
   Disconnected = "DISCONNECTED",

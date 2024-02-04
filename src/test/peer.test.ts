@@ -3,7 +3,7 @@ import { describe, expect, jest, test } from "@jest/globals";
 import { Handshake } from "../handshake";
 import { Peer } from "../peer";
 import { PeerState, PieceState } from "../peer";
-import { Bitfield } from "../bitfield";
+import Bitfield from "bitfield";
 
 describe("Peer", () => {
   test("initialises a connection with the peer's IP and port", async () => {
