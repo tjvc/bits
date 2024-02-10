@@ -4,6 +4,8 @@ import { PeerConnection } from "./peer_connection";
 import { EventEmitter } from "events";
 import { Bitfield } from "./bitfield";
 
+import fs from "fs";
+
 export enum PeerState {
   Disconnected = "DISCONNECTED",
   Connected = "CONNECTED",
@@ -29,7 +31,8 @@ export class Peer extends EventEmitter {
   bitfield: Bitfield | null = null;
   chunks: Buffer[] = [];
   pieces: PieceState[];
-  currentPiece: number | null = null;
+  currentPiece: number | null;
+  downloadDir: string;
 
   constructor(
     ip: Buffer,
@@ -39,7 +42,9 @@ export class Peer extends EventEmitter {
     clientId: Buffer,
     pieces: PieceState[],
     state: PeerState = PeerState.Disconnected,
-    bitfield: Bitfield | null = null
+    bitfield: Bitfield | null = null,
+    currentPiece: number | null = null,
+    downloadDir = "./"
   ) {
     super();
 
@@ -52,6 +57,8 @@ export class Peer extends EventEmitter {
     this.state = state;
     this.pieces = pieces;
     this.bitfield = bitfield;
+    this.downloadDir = downloadDir;
+    this.currentPiece = currentPiece;
 
     this.connection.on("message", (data) => {
       this.receive(data);
@@ -137,6 +144,18 @@ export class Peer extends EventEmitter {
       // 262144 / 16384 = 16 (piece length / chunk length)
       if (this.chunks.length < 16 && this.currentPiece != null) {
         this.requestPieceChunk(this.currentPiece);
+      } else if (this.chunks.length === 16 && this.currentPiece != null) {
+        fs.writeFileSync(
+          `${this.downloadDir}/${this.currentPiece}`,
+          Buffer.concat(this.chunks)
+        );
+        this.pieces[this.currentPiece] = PieceState.Downloaded;
+        this.currentPiece = this.nextPiece();
+        if (this.currentPiece != null) {
+          this.chunks = [];
+          this.pieces[this.currentPiece] = PieceState.Downloading;
+          this.requestPieceChunk(this.currentPiece);
+        }
       }
     }
   }

@@ -1,5 +1,8 @@
 import { describe, expect, jest, test } from "@jest/globals";
 
+import crypto from "crypto";
+import fs from "fs";
+
 import { Handshake } from "../handshake";
 import { Peer } from "../peer";
 import { PeerState, PieceState } from "../peer";
@@ -141,9 +144,45 @@ describe("Peer", () => {
     expect(pieces[2]).toEqual(PieceState.Downloading);
   });
 
-  test.todo(
-    "it downloads a complete piece, marks it as downloaded and requests the next piece"
-  );
+  test("it downloads a complete piece, marks it as downloaded and requests the next piece", async () => {
+    const pieces = [1, 0];
+    const bitfield = new Bitfield(Buffer.from([255])); // 11111111
+    const downloadDir = makeDownloadDir();
+    const currentPiece = 0;
+    const peer = buildPeer({ pieces, bitfield, downloadDir, currentPiece });
+    const connection = peer.connection;
+    const writeSpy = jest
+      .spyOn(connection, "write")
+      .mockImplementation(jest.fn<typeof connection.write>());
+
+    const pieceChunks: Buffer[] = [];
+    for (let i = 0; i < 16; i++) {
+      pieceChunks.push(Buffer.alloc(16384, i.toString()));
+    }
+
+    pieceChunks.forEach((piece) => {
+      connection.emit(
+        "message",
+        Buffer.concat([
+          Buffer.from("0000400007", "hex"), // 4000 = 16 KB length
+          piece,
+        ])
+      );
+    });
+
+    for (let i = 1; i < 16; i++) {
+      expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(0, i));
+    }
+    expect(pieces[0]).toEqual(PieceState.Downloaded);
+
+    expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1, 0));
+    expect(pieces[1]).toEqual(PieceState.Downloading);
+
+    const downloadedPiece = fs.readFileSync(`${downloadDir}/0`);
+    expect(downloadedPiece).toEqual(Buffer.concat(pieceChunks));
+
+    fs.rmdirSync(downloadDir, { recursive: true });
+  });
 
   test.todo(
     "when it fails to download a complete piece, it marks it as not downloaded"
@@ -153,6 +192,12 @@ describe("Peer", () => {
     "when it finishes downloading a piece and there are no more required pieces, it closes the connection"
   );
 
+  function makeDownloadDir() {
+    const downloadDir = `/tmp/${crypto.randomBytes(20).toString("hex")}`;
+    fs.mkdirSync(downloadDir);
+    return downloadDir;
+  }
+
   function buildPeer({
     infoHash = Buffer.alloc(20, 1),
     peerId = Buffer.alloc(20, 2),
@@ -160,6 +205,8 @@ describe("Peer", () => {
     state = PeerState.Disconnected,
     pieces = [],
     bitfield = new Bitfield(Buffer.alloc(0)),
+    currentPiece = null,
+    downloadDir = makeDownloadDir(),
   }: {
     infoHash?: Buffer;
     peerId?: Buffer;
@@ -167,6 +214,8 @@ describe("Peer", () => {
     state?: PeerState;
     pieces?: PieceState[];
     bitfield?: Bitfield;
+    downloadDir?: string;
+    currentPiece?: number | null;
   } = {}): Peer {
     const ip = Buffer.from("127.0.0.1");
     const port = 54321;
@@ -179,18 +228,20 @@ describe("Peer", () => {
       clientId,
       pieces,
       state,
-      bitfield
+      bitfield,
+      currentPiece,
+      downloadDir
     );
 
     return peer;
   }
 
-  function buildPieceMessage(pieceIndex: number) {
+  function buildPieceMessage(pieceIndex: number, chunkIndex = 0) {
     const message = Buffer.alloc(17); // Allocate 17 byte buffer
     message.writeUInt32BE(13); // Write length prefix (does not include length itself)
     message.writeUInt8(6, 4); // Write message type (value, offset)
     message.writeUInt32BE(pieceIndex, 5); // Write piece index
-    message.writeUInt32BE(0, 9); // Write begin (chunk index * chunk length)
+    message.writeUInt32BE(chunkIndex * 16384, 9); // Write begin
     message.writeUInt32BE(16384, 13); // Write length (16 KB)
     return message;
   }
