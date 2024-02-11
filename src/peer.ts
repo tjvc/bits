@@ -6,6 +6,19 @@ import { Bitfield } from "./bitfield";
 
 import fs from "fs";
 
+export type PeerParams = {
+  ip: Buffer;
+  port: number;
+  infoHash: Buffer;
+  id: Buffer;
+  clientId: Buffer;
+  pieces: PieceState[];
+  state?: PeerState;
+  bitfield?: Bitfield;
+  currentPiece?: number | null;
+  downloadDir?: string;
+};
+
 export enum PeerState {
   Disconnected = "DISCONNECTED",
   Connected = "CONNECTED",
@@ -28,24 +41,24 @@ export class Peer extends EventEmitter {
   connection: PeerConnection;
   state: PeerState;
   clientId: Buffer;
-  bitfield: Bitfield | null = null;
+  bitfield: Bitfield | undefined;
   chunks: Buffer[] = [];
   pieces: PieceState[];
   currentPiece: number | null;
   downloadDir: string;
 
-  constructor(
-    ip: Buffer,
-    port: number,
-    infoHash: Buffer,
-    id: Buffer,
-    clientId: Buffer,
-    pieces: PieceState[],
-    state: PeerState = PeerState.Disconnected,
-    bitfield: Bitfield | null = null,
-    currentPiece: number | null = null,
-    downloadDir = "./"
-  ) {
+  constructor({
+    ip,
+    port,
+    infoHash,
+    id,
+    clientId,
+    pieces,
+    state = PeerState.Disconnected,
+    bitfield,
+    currentPiece = null,
+    downloadDir = "./",
+  }: PeerParams) {
     super();
 
     this.ip = ip;

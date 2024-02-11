@@ -22,14 +22,14 @@ export class Download {
       data.peers.forEach((peer: BDecoded) => {
         if (this.isPeer(peer)) {
           this.peers.push(
-            new Peer(
-              peer.ip,
-              peer.port,
+            new Peer({
+              ip: peer.ip,
+              port: peer.port,
               infoHash,
-              peer["peer id"],
+              id: peer["peer id"],
               clientId,
-              this.pieces
-            )
+              pieces: this.pieces,
+            })
           );
         }
       });

@@ -92,13 +92,13 @@ describe("Download", () => {
       download = downloadMock;
     };
 
-    return new mockPeer(
-      Buffer.from("192.168.2.1"),
-      54321,
-      Buffer.from("infoHash"),
-      Buffer.from("id"),
-      Buffer.from("clientId"),
-      []
-    );
+    return new mockPeer({
+      ip: Buffer.from("192.168.2.1"),
+      port: 54321,
+      infoHash: Buffer.from("infoHash"),
+      id: Buffer.from("id"),
+      clientId: Buffer.from("clientId"),
+      pieces: [],
+    });
   }
 });

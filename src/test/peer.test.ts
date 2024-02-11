@@ -4,8 +4,7 @@ import crypto from "crypto";
 import fs from "fs";
 
 import { Handshake } from "../handshake";
-import { Peer } from "../peer";
-import { PeerState, PieceState } from "../peer";
+import { Peer, PeerParams, PeerState, PieceState } from "../peer";
 import { Bitfield } from "../bitfield";
 
 describe("Peer", () => {
@@ -198,40 +197,20 @@ describe("Peer", () => {
     return downloadDir;
   }
 
-  function buildPeer({
-    infoHash = Buffer.alloc(20, 1),
-    peerId = Buffer.alloc(20, 2),
-    clientId = Buffer.alloc(20, 3),
-    state = PeerState.Disconnected,
-    pieces = [],
-    bitfield = new Bitfield(Buffer.alloc(0)),
-    currentPiece = null,
-    downloadDir = makeDownloadDir(),
-  }: {
-    infoHash?: Buffer;
-    peerId?: Buffer;
-    clientId?: Buffer;
-    state?: PeerState;
-    pieces?: PieceState[];
-    bitfield?: Bitfield;
-    downloadDir?: string;
-    currentPiece?: number | null;
-  } = {}): Peer {
-    const ip = Buffer.from("127.0.0.1");
-    const port = 54321;
+  function buildPeer(args: Partial<PeerParams> = {}): Peer {
+    const defaults = {
+      ip: Buffer.from("127.0.0.1"),
+      port: 54321,
+      infoHash: Buffer.alloc(20, 1),
+      id: Buffer.alloc(20, 2),
+      clientId: Buffer.alloc(20, 3),
+      state: PeerState.Disconnected,
+      pieces: [],
+      bitfield: new Bitfield(Buffer.alloc(0)),
+      downloadDir: makeDownloadDir(),
+    };
 
-    const peer = new Peer(
-      ip,
-      port,
-      infoHash,
-      peerId,
-      clientId,
-      pieces,
-      state,
-      bitfield,
-      currentPiece,
-      downloadDir
-    );
+    const peer = new Peer({ ...defaults, ...args });
 
     return peer;
   }
