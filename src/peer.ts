@@ -4,7 +4,7 @@ import { PeerConnection } from "./peer_connection";
 import { EventEmitter } from "events";
 import { Bitfield } from "./bitfield";
 
-import fs from "fs";
+import fs from "fs/promises";
 
 export type PeerParams = {
   ip: Buffer;
@@ -73,8 +73,8 @@ export class Peer extends EventEmitter {
     this.downloadDir = downloadDir;
     this.currentPiece = currentPiece;
 
-    this.connection.on("message", (data) => {
-      this.receive(data);
+    this.connection.on("message", async (data) => {
+      await this.receive(data);
     });
 
     this.connection.on("connect", () => {
@@ -104,7 +104,7 @@ export class Peer extends EventEmitter {
     this.connection.write(handshake.data());
   }
 
-  receive(data: Buffer) {
+  async receive(data: Buffer) {
     if (this.state == PeerState.Connected) {
       const expectedHandshake = new Handshake(this.infoHash, this.id);
 
@@ -158,7 +158,7 @@ export class Peer extends EventEmitter {
       if (this.chunks.length < 16 && this.currentPiece != null) {
         this.requestPieceChunk(this.currentPiece);
       } else if (this.chunks.length === 16 && this.currentPiece != null) {
-        fs.writeFileSync(
+        await fs.writeFile(
           `${this.downloadDir}/${this.currentPiece}`,
           Buffer.concat(this.chunks)
         );

@@ -1,7 +1,7 @@
 import { describe, expect, jest, test } from "@jest/globals";
 
 import crypto from "crypto";
-import fs from "fs";
+import fs from "fs/promises";
 
 import { Handshake } from "../handshake";
 import { Peer, PeerParams, PeerState, PieceState } from "../peer";
@@ -9,7 +9,7 @@ import { Bitfield } from "../bitfield";
 
 describe("Peer", () => {
   test("initialises a connection with the peer's IP and port", async () => {
-    const peer = buildPeer();
+    const peer = await buildPeer();
 
     const connection = peer.connection;
 
@@ -18,7 +18,7 @@ describe("Peer", () => {
   });
 
   test("opens a TCP connection", async () => {
-    const peer = buildPeer();
+    const peer = await buildPeer();
     const connection = peer.connection;
     const connectSpy = jest
       .spyOn(connection, "connect")
@@ -31,7 +31,7 @@ describe("Peer", () => {
 
   test("emits a disconnect event and updates the state when the connection is closed", async () => {
     const disconnectSpy = jest.fn();
-    const peer = buildPeer({ state: PeerState.Connected });
+    const peer = await buildPeer({ state: PeerState.Connected });
     peer.on("disconnect", disconnectSpy);
 
     peer.connection.emit("close");
@@ -41,7 +41,7 @@ describe("Peer", () => {
   });
 
   test("connects, updates state and sends handshake", async () => {
-    const peer = buildPeer({
+    const peer = await buildPeer({
       infoHash: Buffer.from("123"),
       clientId: Buffer.from("789"),
     });
@@ -60,8 +60,8 @@ describe("Peer", () => {
     );
   });
 
-  test("receives handshake message and updates state", () => {
-    const peer = buildPeer({ state: PeerState.Connected });
+  test("receives handshake message and updates state", async () => {
+    const peer = await buildPeer({ state: PeerState.Connected });
 
     peer.connection.emit(
       "message",
@@ -71,8 +71,8 @@ describe("Peer", () => {
     expect(peer.state).toEqual("HANDSHAKE_COMPLETED");
   });
 
-  test("closes connection if another message is received before successful handshake", () => {
-    const peer = buildPeer();
+  test("closes connection if another message is received before successful handshake", async () => {
+    const peer = await buildPeer();
     const connection = peer.connection;
     const closeSpy = jest
       .spyOn(connection, "close")
@@ -85,7 +85,7 @@ describe("Peer", () => {
   });
 
   test("receives a bitfield message, sets the bitfield and sends an interested message if the peer has required pieces", async () => {
-    const peer = buildPeer({
+    const peer = await buildPeer({
       pieces: [0],
       state: PeerState.HandshakeCompleted,
     });
@@ -102,7 +102,7 @@ describe("Peer", () => {
   });
 
   test("receives a bitfield message, sets the bitfield and closes the connection if the peer does not have required pieces", async () => {
-    const peer = buildPeer({
+    const peer = await buildPeer({
       pieces: [0],
       state: PeerState.HandshakeCompleted,
     });
@@ -119,7 +119,7 @@ describe("Peer", () => {
   });
 
   test("it receives an unchoke message and updates its state", async () => {
-    const peer = buildPeer();
+    const peer = await buildPeer();
     const connection = peer.connection;
 
     connection.emit("message", Buffer.from("0000000101", "hex"));
@@ -130,7 +130,7 @@ describe("Peer", () => {
   test("when unchoked, it sends a request message for a required piece offered by the peer, updates its state and marks the piece as downloading", async () => {
     const pieces = [1, 0, 0];
     const bitfield = new Bitfield(Buffer.from([32])); // 00100000
-    const peer = buildPeer({ pieces, bitfield });
+    const peer = await buildPeer({ pieces, bitfield });
     const connection = peer.connection;
     const writeSpy = jest
       .spyOn(connection, "write")
@@ -146,9 +146,14 @@ describe("Peer", () => {
   test("it downloads a complete piece, marks it as downloaded and requests the next piece", async () => {
     const pieces = [1, 0];
     const bitfield = new Bitfield(Buffer.from([255])); // 11111111
-    const downloadDir = makeDownloadDir();
+    const downloadDir = await makeDownloadDir();
     const currentPiece = 0;
-    const peer = buildPeer({ pieces, bitfield, downloadDir, currentPiece });
+    const peer = await buildPeer({
+      pieces,
+      bitfield,
+      downloadDir,
+      currentPiece,
+    });
     const connection = peer.connection;
     const writeSpy = jest
       .spyOn(connection, "write")
@@ -159,12 +164,12 @@ describe("Peer", () => {
       pieceChunks.push(Buffer.alloc(16384, i.toString()));
     }
 
-    pieceChunks.forEach((piece) => {
+    pieceChunks.forEach((chunk) => {
       connection.emit(
         "message",
         Buffer.concat([
           Buffer.from("0000400007", "hex"), // 4000 = 16 KB length
-          piece,
+          chunk,
         ])
       );
     });
@@ -172,15 +177,15 @@ describe("Peer", () => {
     for (let i = 1; i < 16; i++) {
       expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(0, i));
     }
+
+    const downloadedPiece = await fs.readFile(`${downloadDir}/0`);
+    expect(downloadedPiece).toEqual(Buffer.concat(pieceChunks));
     expect(pieces[0]).toEqual(PieceState.Downloaded);
 
     expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1, 0));
     expect(pieces[1]).toEqual(PieceState.Downloading);
 
-    const downloadedPiece = fs.readFileSync(`${downloadDir}/0`);
-    expect(downloadedPiece).toEqual(Buffer.concat(pieceChunks));
-
-    fs.rmdirSync(downloadDir, { recursive: true });
+    await fs.rmdir(downloadDir, { recursive: true });
   });
 
   test.todo(
@@ -191,13 +196,13 @@ describe("Peer", () => {
     "when it finishes downloading a piece and there are no more required pieces, it closes the connection"
   );
 
-  function makeDownloadDir() {
+  async function makeDownloadDir() {
     const downloadDir = `/tmp/${crypto.randomBytes(20).toString("hex")}`;
-    fs.mkdirSync(downloadDir);
+    await fs.mkdir(downloadDir);
     return downloadDir;
   }
 
-  function buildPeer(args: Partial<PeerParams> = {}): Peer {
+  async function buildPeer(args: Partial<PeerParams> = {}): Promise<Peer> {
     const defaults = {
       ip: Buffer.from("127.0.0.1"),
       port: 54321,
@@ -207,7 +212,7 @@ describe("Peer", () => {
       state: PeerState.Disconnected,
       pieces: [],
       bitfield: new Bitfield(Buffer.alloc(0)),
-      downloadDir: makeDownloadDir(),
+      downloadDir: await makeDownloadDir(),
     };
 
     const peer = new Peer({ ...defaults, ...args });
