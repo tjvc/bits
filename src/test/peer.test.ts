@@ -185,7 +185,7 @@ describe("Peer", () => {
     expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1, 0));
     expect(pieces[1]).toEqual(PieceState.Downloading);
 
-    await fs.rmdir(downloadDir, { recursive: true });
+    await fs.rm(downloadDir, { recursive: true });
   });
 
   test.todo(
