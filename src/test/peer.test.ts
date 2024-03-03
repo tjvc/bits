@@ -220,7 +220,7 @@ describe("Peer", () => {
       state: PeerState.Disconnected,
       pieces: [],
       bitfield: new Bitfield(Buffer.alloc(0)),
-      downloadDir: await makeDownloadDir(),
+      downloadDir: args.downloadDir || (await makeDownloadDir()),
     };
 
     const peer = new Peer({ ...defaults, ...args });
