@@ -17,6 +17,7 @@ export type PeerParams = {
   bitfield?: Bitfield;
   currentPiece?: number | null;
   downloadDir?: string;
+  chunks?: Buffer[];
 };
 
 export enum PeerState {
@@ -42,7 +43,7 @@ export class Peer extends EventEmitter {
   state: PeerState;
   clientId: Buffer;
   bitfield: Bitfield | undefined;
-  chunks: Buffer[] = [];
+  chunks: Buffer[];
   pieces: PieceState[];
   currentPiece: number | null;
   downloadDir: string;
@@ -58,6 +59,7 @@ export class Peer extends EventEmitter {
     bitfield,
     currentPiece = null,
     downloadDir = "./",
+    chunks = [],
   }: PeerParams) {
     super();
 
@@ -72,6 +74,7 @@ export class Peer extends EventEmitter {
     this.bitfield = bitfield;
     this.downloadDir = downloadDir;
     this.currentPiece = currentPiece;
+    this.chunks = chunks;
 
     this.connection.on("message", async (data) => {
       await this.receive(data);

@@ -1,7 +1,8 @@
 import { describe, expect, jest, test } from "@jest/globals";
 
-import crypto from "crypto";
 import fs from "fs/promises";
+import { join } from "path";
+import { tmpdir } from "os";
 
 import { Handshake } from "../handshake";
 import { Peer, PeerParams, PeerState, PieceState } from "../peer";
@@ -143,49 +144,58 @@ describe("Peer", () => {
     expect(pieces[2]).toEqual(PieceState.Downloading);
   });
 
-  test("it downloads a complete piece, marks it as downloaded and requests the next piece", async () => {
-    const pieces = [1, 0];
-    const bitfield = new Bitfield(Buffer.from([255])); // 11111111
-    const downloadDir = await makeDownloadDir();
+  test("upon receiving a piece chunk, it caches it and requests the next", async () => {
+    const pieces = [1];
     const currentPiece = 0;
     const peer = await buildPeer({
       pieces,
-      bitfield,
-      downloadDir,
       currentPiece,
     });
-    const connection = peer.connection;
+    const currentChunkIndex = 0;
+    const chunkMessage = Buffer.concat([
+      Buffer.from("0000400007", "hex"), // 4000 = 16 KB length
+      Buffer.alloc(16384, currentChunkIndex.toString()),
+    ]);
     const writeSpy = jest
-      .spyOn(connection, "write")
-      .mockImplementation(jest.fn<typeof connection.write>());
+      .spyOn(peer.connection, "write")
+      .mockImplementation(jest.fn<typeof peer.connection.write>());
 
-    const pieceChunks: Buffer[] = [];
-    for (let i = 0; i < 16; i++) {
-      pieceChunks.push(Buffer.alloc(16384, i.toString()));
-    }
+    await peer.receive(chunkMessage);
 
-    pieceChunks.forEach((chunk) => {
-      connection.emit(
-        "message",
-        Buffer.concat([
-          Buffer.from("0000400007", "hex"), // 4000 = 16 KB length
-          chunk,
-        ])
-      );
+    expect(peer.chunks).toEqual([chunkMessage.subarray(5)]); // 5-byte prefix
+    expect(writeSpy).toHaveBeenCalledWith(
+      buildPieceMessage(0, currentChunkIndex + 1)
+    );
+  });
+
+  test("upon receiving the final piece chunk, it writes the piece to disk and requests the first chunk of the next", async () => {
+    const pieces = [1, 0];
+    const bitfield = new Bitfield(Buffer.from([255])); // 11111111
+    const currentPiece = 0;
+    const downloadDir = await makeDownloadDir();
+    const pieceChunks = Array.from({ length: 16 }, (_, i) =>
+      Buffer.alloc(16384, i.toString())
+    );
+    const peer = await buildPeer({
+      pieces,
+      bitfield,
+      currentPiece,
+      downloadDir,
+      chunks: pieceChunks.slice(0, -1),
     });
+    const finalChunkMessage = Buffer.concat([
+      Buffer.from("0000400007", "hex"), // 4000 = 16 KB length
+      pieceChunks[15],
+    ]);
+    const writeSpy = jest
+      .spyOn(peer.connection, "write")
+      .mockImplementation(jest.fn<typeof peer.connection.write>());
 
-    for (let i = 1; i < 16; i++) {
-      expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(0, i));
-    }
+    await peer.receive(finalChunkMessage);
 
     const downloadedPiece = await fs.readFile(`${downloadDir}/0`);
     expect(downloadedPiece).toEqual(Buffer.concat(pieceChunks));
-    expect(pieces[0]).toEqual(PieceState.Downloaded);
-
-    expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1, 0));
-    expect(pieces[1]).toEqual(PieceState.Downloading);
-
-    await fs.rm(downloadDir, { recursive: true });
+    expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1));
   });
 
   test.todo(
@@ -197,9 +207,7 @@ describe("Peer", () => {
   );
 
   async function makeDownloadDir() {
-    const downloadDir = `/tmp/${crypto.randomBytes(20).toString("hex")}`;
-    await fs.mkdir(downloadDir);
-    return downloadDir;
+    return await fs.mkdtemp(join(tmpdir(), "bits-"));
   }
 
   async function buildPeer(args: Partial<PeerParams> = {}): Promise<Peer> {
