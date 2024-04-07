@@ -168,7 +168,7 @@ describe("Peer", () => {
     );
   });
 
-  test("upon receiving the final piece chunk, it writes the piece to disk and requests the first chunk of the next", async () => {
+  test("upon receiving the final piece chunk, it writes the piece to disk, emits a piece downloaded event, and requests the first chunk of the next", async () => {
     const pieces = [1, 0];
     const bitfield = new Bitfield(Buffer.from([255])); // 11111111
     const currentPiece = 0;
@@ -187,6 +187,8 @@ describe("Peer", () => {
       Buffer.from("0000400007", "hex"), // 4000 = 16 KB length
       pieceChunks[15],
     ]);
+    const pieceDownloadedSpy = jest.fn();
+    peer.on("pieceDownloaded", pieceDownloadedSpy);
     const writeSpy = jest
       .spyOn(peer.connection, "write")
       .mockImplementation(jest.fn<typeof peer.connection.write>());
@@ -195,6 +197,7 @@ describe("Peer", () => {
 
     const downloadedPiece = await fs.readFile(`${downloadDir}/0`);
     expect(downloadedPiece).toEqual(Buffer.concat(pieceChunks));
+    expect(pieceDownloadedSpy).toHaveBeenCalled();
     expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1));
   });
 

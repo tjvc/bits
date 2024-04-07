@@ -166,6 +166,7 @@ export class Peer extends EventEmitter {
           Buffer.concat(this.chunks)
         );
         this.pieces[this.currentPiece] = PieceState.Downloaded;
+        this.emit("pieceDownloaded");
         this.currentPiece = this.nextPiece();
         if (this.currentPiece != null) {
           this.chunks = [];

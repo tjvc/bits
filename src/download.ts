@@ -1,7 +1,10 @@
+import fs from "fs/promises";
+
 import { BDecoded, BDict, BList } from "./b_data";
 import { Peer, PieceState } from "./peer";
 
 export class Download {
+  downloadDir: string;
   peers: Peer[];
   pieces: PieceState[];
   private maxDownloaders: number;
@@ -12,11 +15,14 @@ export class Download {
     clientId: Buffer,
     pieceCount: number,
     maxDownloaders = 3,
-    peers: Peer[] = []
+    peers: Peer[] = [],
+    pieces: PieceState[] = Array(pieceCount).fill(0),
+    downloadDir = "./"
   ) {
+    this.downloadDir = downloadDir;
     this.maxDownloaders = maxDownloaders;
     this.peers = peers;
-    this.pieces = Array(pieceCount).fill(0);
+    this.pieces = pieces;
 
     if (this.isBDict(data) && this.isBList(data.peers)) {
       data.peers.forEach((peer: BDecoded) => {
@@ -40,6 +46,12 @@ export class Download {
         this.peers.splice(this.peers.indexOf(peer), 1);
         this.peers.push(peer);
       });
+
+      peer.on("pieceDownloaded", () => {
+        if (this.pieces.every((piece) => piece === PieceState.Downloaded)) {
+          this.finish();
+        }
+      });
     });
   }
 
@@ -52,6 +64,18 @@ export class Download {
         count++;
       }
     });
+  }
+
+  async finish() {
+    const fileHandle = await fs.open(`${this.downloadDir}/download`, "w");
+    const stream = fileHandle.createWriteStream();
+
+    for (let i = 0; i < this.pieces.length; i++) {
+      stream.write(await fs.readFile(`${this.downloadDir}/${i}`));
+    }
+
+    stream.end();
+    await fileHandle.close();
   }
 
   private isBDict(data: BDecoded): data is BDict {
