@@ -187,8 +187,7 @@ describe("Peer", () => {
       Buffer.from("0000400007", "hex"), // 4000 = 16 KB length
       pieceChunks[15],
     ]);
-    const pieceDownloadedSpy = jest.fn();
-    peer.on("pieceDownloaded", pieceDownloadedSpy);
+    peer.emit = jest.fn<typeof peer.emit>();
     const writeSpy = jest
       .spyOn(peer.connection, "write")
       .mockImplementation(jest.fn<typeof peer.connection.write>());
@@ -197,7 +196,7 @@ describe("Peer", () => {
 
     const downloadedPiece = await fs.readFile(`${downloadDir}/0`);
     expect(downloadedPiece).toEqual(Buffer.concat(pieceChunks));
-    expect(pieceDownloadedSpy).toHaveBeenCalled();
+    expect(peer.emit).toHaveBeenCalledWith("pieceDownloaded");
     expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1));
   });
 
