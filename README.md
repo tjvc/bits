@@ -4,8 +4,8 @@ A work-in-progress TypeScript BitTorrent client, written for educational purpose
 
 Writing a BitTorrent client is interesting because it teaches (amongst other things):
 
-* Working with data at the level of bits, bytes and buffers
-* TCP, including working with a simple protocol
-* Concurrency
+- Working with data at the level of bits, bytes and buffers
+- TCP, including working with a simple protocol
+- Concurrency
 
 See the commit history for development notes.
