@@ -1,6 +1,6 @@
 # Bits
 
-A TypeScript BitTorrent client (in progress), written to satisfy the [BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html).
+A work-in-progress TypeScript BitTorrent client, written for educational purposes. It is intended to satisfy the [BitTorrent Protocol Specification](http://bittorrent.org/beps/bep_0003.html).
 
 Writing a BitTorrent client is interesting because it teaches (amongst other things):
 
