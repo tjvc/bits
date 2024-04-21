@@ -91,6 +91,11 @@ export class Peer extends EventEmitter {
       console.debug("Connection closed by peer");
       this.emit("disconnect");
     });
+
+    this.connection.on("error", (error) => {
+      console.error("Connection error", error);
+      this.connection.close();
+    });
   }
 
   connect() {

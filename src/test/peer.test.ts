@@ -61,6 +61,20 @@ describe("Peer", () => {
     );
   });
 
+  describe("on connection error", () => {
+    test("it logs the error and closes the connection", async () => {
+      const peer = await buildPeer({ state: PeerState.Connected });
+      const error = new Error("Connection error");
+      peer.connection.close = jest.fn<typeof peer.connection.close>();
+      console.error = jest.fn();
+
+      peer.connection.emit("error", error);
+
+      expect(console.error).toHaveBeenCalledWith("Connection error", error);
+      expect(peer.connection.close).toHaveBeenCalled();
+    });
+  });
+
   test("receives handshake message and updates state", async () => {
     const peer = await buildPeer({ state: PeerState.Connected });
 

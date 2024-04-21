@@ -29,6 +29,10 @@ export class PeerConnection extends EventEmitter {
     this.connection.on("data", (data) => {
       this.receive(data);
     });
+
+    this.connection.on("error", (error) => {
+      this.emit("error", error);
+    });
   }
 
   connect() {

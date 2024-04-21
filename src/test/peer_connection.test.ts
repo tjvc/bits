@@ -46,6 +46,21 @@ describe("PeerConnection", () => {
     expect(connectSpy).toHaveBeenCalled();
   });
 
+  describe("on error", () => {
+    test("emits an error event with the error", () => {
+      const ip = Buffer.from("127.0.0.1");
+      const port = 54321;
+      const socket = new Socket();
+      const error = new Error("Connection error");
+      const peerConnection = new PeerConnection(ip, port, socket);
+      peerConnection.emit = jest.fn<typeof peerConnection.emit>();
+
+      socket.emit("error", error);
+
+      expect(peerConnection.emit).toHaveBeenCalledWith("error", error);
+    });
+  });
+
   describe("receive", () => {
     function createMessage(
       message: string,
