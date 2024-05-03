@@ -31,4 +31,4 @@ async function main() {
   download.start();
 }
 
-main();
+main().catch((e) => console.error(e));

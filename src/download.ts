@@ -47,9 +47,9 @@ export class Download {
         this.peers.push(peer);
       });
 
-      peer.on("pieceDownloaded", () => {
+      peer.on("pieceDownloaded", async () => {
         if (this.pieces.every((piece) => piece === PieceState.Downloaded)) {
-          this.finish();
+          await this.finish();
         }
       });
     });
