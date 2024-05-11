@@ -1,4 +1,4 @@
-import { BDict } from "./b_data";
+import { BDict, BList } from "./b_data";
 import { InfoHash } from "./info_hash";
 
 export class Info {
@@ -8,25 +8,8 @@ export class Info {
     this.info = info;
   }
 
-  bencode(): Buffer {
-    let buf = Buffer.from("d");
-
-    for (const [key, value] of Object.entries(this.info)) {
-      const keyBuf = Buffer.from(key.length + ":" + key);
-
-      let valueBuf;
-      if (typeof value == "number") {
-        valueBuf = Buffer.from("i" + value + "e");
-      } else if (Buffer.isBuffer(value)) {
-        valueBuf = Buffer.concat([Buffer.from(value.length + ":"), value]);
-      } else {
-        throw new Error("Unhandled data type");
-      }
-
-      buf = Buffer.concat([buf, keyBuf, valueBuf]);
-    }
-
-    return Buffer.concat([buf, Buffer.from("e")]);
+  bencode(info = this.info): Buffer {
+    return this.encodeDict(info);
   }
 
   hash(): InfoHash {
@@ -51,5 +34,47 @@ export class Info {
     } else {
       throw new Error("Invalid pieces");
     }
+  }
+
+  private encodeValue(value: BDict | BList | Buffer | number): Buffer {
+    if (typeof value == "number") {
+      return this.encodeInt(value);
+    } else if (Buffer.isBuffer(value)) {
+      return this.encodeBuf(value);
+    } else if (Array.isArray(value)) {
+      return this.encodeList(value);
+    } else {
+      return this.bencode(value);
+    }
+  }
+
+  private encodeDict(bdict: BDict): Buffer {
+    const parts = Object.entries(bdict).reduce(
+      (acc: Buffer[], [key, value]) => {
+        acc.push(Buffer.from(key.length + ":" + key));
+        acc.push(this.encodeValue(value));
+        return acc;
+      },
+      []
+    );
+
+    return Buffer.concat([Buffer.from("d"), ...parts, Buffer.from("e")]);
+  }
+
+  private encodeList(blist: BList): Buffer {
+    const parts = blist.reduce((acc: Buffer[], value) => {
+      acc.push(this.encodeValue(value));
+      return acc;
+    }, []);
+
+    return Buffer.concat([Buffer.from("l"), ...parts, Buffer.from("e")]);
+  }
+
+  private encodeInt(int: number): Buffer {
+    return Buffer.from("i" + int + "e");
+  }
+
+  private encodeBuf(buf: Buffer): Buffer {
+    return Buffer.concat([Buffer.from(buf.length + ":"), buf]);
   }
 }
