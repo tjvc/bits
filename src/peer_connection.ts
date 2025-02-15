@@ -2,6 +2,7 @@ import { EventEmitter } from "events";
 import { Socket } from "net";
 
 import { Handshake } from "./handshake";
+import { logger } from "./logger";
 
 export class PeerConnection extends EventEmitter {
   ip: Buffer;
@@ -40,7 +41,7 @@ export class PeerConnection extends EventEmitter {
   }
 
   receive(data: Buffer) {
-    console.debug("Received data:", data);
+    logger.debug("Received data:", data);
 
     while (data.length > 0) {
       if (this.buffer.length > 0) {
