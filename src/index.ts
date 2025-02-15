@@ -1,5 +1,6 @@
 import { BData } from "./b_data";
 import { Download } from "./download";
+import { logger } from "./logger";
 import { Torrent } from "./torrent";
 import { TrackerRequest } from "./tracker_request";
 
@@ -31,4 +32,4 @@ async function main() {
   download.start();
 }
 
-main().catch((e) => console.error(e));
+main().catch((e) => logger.error(e));

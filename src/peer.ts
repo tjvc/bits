@@ -3,6 +3,7 @@ import { Message, MessageType } from "./message";
 import { PeerConnection } from "./peer_connection";
 import { EventEmitter } from "events";
 import { Bitfield } from "./bitfield";
+import { logger } from "./logger";
 
 import fs from "fs/promises";
 
@@ -82,18 +83,18 @@ export class Peer extends EventEmitter {
 
     this.connection.on("connect", () => {
       this.state = PeerState.Connected;
-      console.debug("Connected to", this.ip.toString());
+      logger.debug("Connected to", this.ip.toString());
       this.sendHandshake();
     });
 
     this.connection.on("close", () => {
       this.state = PeerState.Disconnected;
-      console.debug("Connection closed by peer");
+      logger.debug("Connection closed by peer");
       this.emit("disconnect");
     });
 
     this.connection.on("error", (error) => {
-      console.error("Connection error", error);
+      logger.error("Connection error", error);
       this.connection.close();
     });
   }
@@ -107,7 +108,7 @@ export class Peer extends EventEmitter {
   }
 
   sendHandshake() {
-    console.debug("Sending handshake");
+    logger.debug("Sending handshake");
     const handshake = new Handshake(this.infoHash, this.clientId);
     this.connection.write(handshake.data());
   }
@@ -117,7 +118,7 @@ export class Peer extends EventEmitter {
       const expectedHandshake = new Handshake(this.infoHash, this.id);
 
       if (expectedHandshake.matches(data)) {
-        console.debug("Received handshake");
+        logger.debug("Received handshake");
         this.state = PeerState.HandshakeCompleted;
         return;
       }
@@ -126,32 +127,32 @@ export class Peer extends EventEmitter {
     const message = new Message(data);
 
     if (message.type() === MessageType.Bitfield) {
-      console.debug("Received bitfield");
+      logger.debug("Received bitfield");
       if (this.state != PeerState.HandshakeCompleted) {
-        console.debug("Received bitfield before handshake");
+        logger.debug("Received bitfield before handshake");
         this.connection.close();
-        console.debug("Connection closed");
+        logger.debug("Connection closed");
         return;
       }
 
       this.bitfield = new Bitfield(message.body());
 
       if (this.nextPiece() != null) {
-        console.debug("Sending interested");
+        logger.debug("Sending interested");
         this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
       } else {
         this.connection.close();
-        console.debug("Connection closed");
+        logger.debug("Connection closed");
       }
     }
 
     if (message.type() === MessageType.Unchoke) {
-      console.debug("Received unchoke");
+      logger.debug("Received unchoke");
       this.state = PeerState.Unchoked;
 
       this.currentPiece = this.nextPiece();
       if (this.currentPiece != null) {
-        console.debug("Requesting piece", this.currentPiece);
+        logger.debug("Requesting piece", this.currentPiece);
         this.requestPieceChunk(this.currentPiece);
         this.state = PeerState.Downloading;
         this.pieces[this.currentPiece] = PieceState.Downloading;
@@ -159,7 +160,7 @@ export class Peer extends EventEmitter {
     }
 
     if (message.type() === MessageType.Piece) {
-      console.debug("Received chunk");
+      logger.debug("Received chunk");
       this.chunks.push(message.body());
 
       // 262144 / 16384 = 16 (piece length / chunk length)
@@ -183,7 +184,7 @@ export class Peer extends EventEmitter {
   }
 
   requestPieceChunk(pieceIndex: number) {
-    console.debug("Requesting chunk");
+    logger.debug("Requesting chunk");
     const request = Buffer.alloc(17); // Allocate 17 byte buffer
     request.writeUInt32BE(13); // Write length prefix (does not include length itself)
     request.writeUInt8(6, 4); // Write message type (value, offset)
