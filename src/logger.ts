@@ -16,29 +16,35 @@ export class Logger {
   }
 
   error(...args: LogMessage): void {
-    console.error(...args);
+    console.error(...this.formatMessage("error", args));
   }
 
   warn(...args: LogMessage): void {
     if (this.shouldLog("warn")) {
-      console.warn(...args);
+      console.warn(...this.formatMessage("warn", args));
     }
   }
 
   info(...args: LogMessage): void {
     if (this.shouldLog("info")) {
-      console.info(...args);
+      console.info(...this.formatMessage("info", args));
     }
   }
 
   debug(...args: LogMessage): void {
     if (this.shouldLog("debug")) {
-      console.debug(...args);
+      console.debug(...this.formatMessage("debug", args));
     }
   }
 
   private shouldLog(level: LogLevel): boolean {
     return LOG_LEVELS[level] <= LOG_LEVELS[this.level];
+  }
+
+  private formatMessage(level: LogLevel, args: LogMessage): LogMessage {
+    const timestamp = new Date().toISOString();
+    const [message, ...rest] = args;
+    return [`[${timestamp}] [${level.toUpperCase()}] ${message}`, ...rest];
   }
 }
 
