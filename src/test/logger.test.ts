@@ -11,11 +11,13 @@ import { Logger, LogLevel } from "../logger";
 describe("Logger", () => {
   const originalEnv = process.env;
   const levels: LogLevel[] = ["error", "warn", "info", "debug"];
+  const mockDate = new Date("2025-01-01T00:00:00.000Z");
 
   beforeEach(() => {
     levels.forEach((level) => {
       jest.spyOn(console, level).mockImplementation(() => undefined);
     });
+    jest.spyOn(global, "Date").mockImplementation(() => mockDate);
     process.env = { ...originalEnv };
   });
 
@@ -30,7 +32,9 @@ describe("Logger", () => {
 
     (["error"] as const).forEach((level) => {
       logger[level](`test ${level}`);
-      expect(console[level]).toHaveBeenCalledWith(`test ${level}`);
+      expect(console[level]).toHaveBeenCalledWith(
+        `[${mockDate.toISOString()}] [${level.toUpperCase()}] test ${level}`
+      );
     });
 
     (["warn", "info", "debug"] as const).forEach((level) => {
@@ -45,7 +49,9 @@ describe("Logger", () => {
 
     (["error", "warn"] as const).forEach((level) => {
       logger[level](`test ${level}`);
-      expect(console[level]).toHaveBeenCalledWith(`test ${level}`);
+      expect(console[level]).toHaveBeenCalledWith(
+        `[${mockDate.toISOString()}] [${level.toUpperCase()}] test ${level}`
+      );
     });
 
     (["info", "debug"] as const).forEach((level) => {
@@ -60,7 +66,9 @@ describe("Logger", () => {
 
     (["error", "warn", "info"] as const).forEach((level) => {
       logger[level](`test ${level}`);
-      expect(console[level]).toHaveBeenCalledWith(`test ${level}`);
+      expect(console[level]).toHaveBeenCalledWith(
+        `[${mockDate.toISOString()}] [${level.toUpperCase()}] test ${level}`
+      );
     });
 
     (["debug"] as const).forEach((level) => {
@@ -75,7 +83,9 @@ describe("Logger", () => {
 
     (["error", "warn", "info", "debug"] as const).forEach((level) => {
       logger[level](`test ${level}`);
-      expect(console[level]).toHaveBeenCalledWith(`test ${level}`);
+      expect(console[level]).toHaveBeenCalledWith(
+        `[${mockDate.toISOString()}] [${level.toUpperCase()}] test ${level}`
+      );
     });
   });
 
@@ -85,7 +95,9 @@ describe("Logger", () => {
 
     (["error"] as const).forEach((level) => {
       logger[level](`test ${level}`);
-      expect(console[level]).toHaveBeenCalledWith(`test ${level}`);
+      expect(console[level]).toHaveBeenCalledWith(
+        `[${mockDate.toISOString()}] [${level.toUpperCase()}] test ${level}`
+      );
     });
 
     (["warn", "info", "debug"] as const).forEach((level) => {

@@ -70,7 +70,10 @@ describe("Peer", () => {
 
       peer.connection.emit("error", error);
 
-      expect(console.error).toHaveBeenCalledWith("Connection error", error);
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("Connection error"),
+        error
+      );
       expect(peer.connection.close).toHaveBeenCalled();
     });
   });
