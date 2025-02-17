@@ -3,22 +3,33 @@ import fs from "fs/promises";
 import { BDecoded, BDict, BList } from "./b_data";
 import { Peer, PieceState } from "./peer";
 
+interface DownloadParams {
+  data: BDecoded;
+  infoHash: Buffer;
+  clientId: Buffer;
+  pieceCount: number;
+  maxDownloaders?: number;
+  peers?: Peer[];
+  pieces?: PieceState[];
+  downloadDir?: string;
+}
+
 export class Download {
   downloadDir: string;
   peers: Peer[];
   pieces: PieceState[];
   private maxDownloaders: number;
 
-  constructor(
-    data: BDecoded,
-    infoHash: Buffer,
-    clientId: Buffer,
-    pieceCount: number,
+  constructor({
+    data,
+    infoHash,
+    clientId,
+    pieceCount,
     maxDownloaders = 3,
-    peers: Peer[] = [],
-    pieces: PieceState[] = Array(pieceCount).fill(0),
-    downloadDir = "./"
-  ) {
+    peers = [],
+    pieces = Array(pieceCount).fill(0),
+    downloadDir = "./",
+  }: DownloadParams) {
     this.downloadDir = downloadDir;
     this.maxDownloaders = maxDownloaders;
     this.peers = peers;

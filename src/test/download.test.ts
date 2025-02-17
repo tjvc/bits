@@ -14,27 +14,23 @@ describe("Download", () => {
       port: 54321,
       "peer id": Buffer.from("peerId"),
     };
-    const download = new Download(
-      {
-        peers: [peer],
-      },
-      Buffer.from("infoHash"),
-      Buffer.from("clientId"),
-      0
-    );
+    const download = new Download({
+      data: { peers: [peer] },
+      infoHash: Buffer.from("infoHash"),
+      clientId: Buffer.from("clientId"),
+      pieceCount: 0,
+    });
 
     expect(download.peers[0].ip).toEqual(peer.ip);
   });
 
   test("does not initialise invalid peers", async () => {
-    const download = new Download(
-      {
-        peers: [{ ip: Buffer.from("192.168.2.1") }],
-      },
-      Buffer.from("infoHash"),
-      Buffer.from("clientId"),
-      0
-    );
+    const download = new Download({
+      data: { peers: [{ ip: Buffer.from("192.168.2.1") }] },
+      infoHash: Buffer.from("infoHash"),
+      clientId: Buffer.from("clientId"),
+      pieceCount: 0,
+    });
 
     expect(download.peers).toEqual([]);
   });
@@ -42,7 +38,12 @@ describe("Download", () => {
   test("does not error when initialised with unexpected data types", async () => {
     const data = Buffer.from("test");
     expect(() => {
-      new Download(data, Buffer.from("infoHash"), Buffer.from("clientId"), 0);
+      new Download({
+        data,
+        infoHash: Buffer.from("infoHash"),
+        clientId: Buffer.from("clientId"),
+        pieceCount: 0,
+      });
     }).not.toThrow();
   });
 
@@ -50,14 +51,14 @@ describe("Download", () => {
     const firstPeer = buildMockPeer();
     const secondPeer = buildMockPeer();
     const thirdPeer = buildMockPeer();
-    const download = new Download(
-      {},
-      Buffer.from("infoHash"),
-      Buffer.from("clientId"),
-      0,
-      2,
-      [firstPeer, secondPeer, thirdPeer]
-    );
+    const download = new Download({
+      data: {},
+      infoHash: Buffer.from("infoHash"),
+      clientId: Buffer.from("clientId"),
+      pieceCount: 0,
+      maxDownloaders: 2,
+      peers: [firstPeer, secondPeer, thirdPeer],
+    });
 
     download.start();
 
@@ -71,14 +72,14 @@ describe("Download", () => {
       this.emit("disconnect");
     });
     const secondPeer = buildMockPeer();
-    const download = new Download(
-      {},
-      Buffer.from("infoHash"),
-      Buffer.from("clientId"),
-      0,
-      2,
-      [firstPeer, secondPeer]
-    );
+    const download = new Download({
+      data: {},
+      infoHash: Buffer.from("infoHash"),
+      clientId: Buffer.from("clientId"),
+      pieceCount: 0,
+      maxDownloaders: 2,
+      peers: [firstPeer, secondPeer],
+    });
 
     download.start();
 
@@ -94,15 +95,15 @@ describe("Download", () => {
 
   test("when the final piece is downloaded it finishes the download", () => {
     const peer = buildMockPeer();
-    const download = new Download(
-      {},
-      Buffer.from("infoHash"),
-      Buffer.from("clientId"),
-      0,
-      2,
-      [peer],
-      [2, 2]
-    );
+    const download = new Download({
+      data: {},
+      infoHash: Buffer.from("infoHash"),
+      clientId: Buffer.from("clientId"),
+      pieceCount: 0,
+      maxDownloaders: 2,
+      peers: [peer],
+      pieces: [2, 2],
+    });
     jest
       .spyOn(download, "finish")
       .mockImplementation(jest.fn<typeof download.finish>());
@@ -119,16 +120,16 @@ describe("Download", () => {
     const secondPiece = Buffer.alloc(16384, 2);
     await fs.writeFile(`${downloadDir}/1`, secondPiece);
     const peer = buildMockPeer();
-    const download = new Download(
-      {},
-      Buffer.from("infoHash"),
-      Buffer.from("clientId"),
-      0,
-      2,
-      [peer],
-      [2, 2],
-      downloadDir
-    );
+    const download = new Download({
+      data: {},
+      infoHash: Buffer.from("infoHash"),
+      clientId: Buffer.from("clientId"),
+      pieceCount: 0,
+      maxDownloaders: 2,
+      peers: [peer],
+      pieces: [2, 2],
+      downloadDir,
+    });
 
     await download.finish();
 

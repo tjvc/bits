@@ -22,12 +22,12 @@ async function main() {
   );
   const trackerResponse = await trackerRequest.send();
 
-  const download = new Download(
-    new BData(trackerResponse).decode(),
-    infoHash.raw,
-    Buffer.from(peerId),
-    torrent.info().pieceCount()
-  );
+  const download = new Download({
+    data: new BData(trackerResponse).decode(),
+    infoHash: infoHash.raw,
+    clientId: Buffer.from(peerId),
+    pieceCount: torrent.info().pieceCount(),
+  });
 
   download.start();
 }
