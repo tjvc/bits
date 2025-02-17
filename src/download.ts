@@ -8,7 +8,7 @@ interface DownloadParams {
   infoHash: Buffer;
   clientId: Buffer;
   pieceCount: number;
-  maxDownloaders?: number;
+  maxUploaders?: number;
   peers?: Peer[];
   pieces?: PieceState[];
   downloadDir?: string;
@@ -18,20 +18,20 @@ export class Download {
   downloadDir: string;
   peers: Peer[];
   pieces: PieceState[];
-  private maxDownloaders: number;
+  private maxUploaders: number;
 
   constructor({
     data,
     infoHash,
     clientId,
     pieceCount,
-    maxDownloaders = 3,
+    maxUploaders = 3,
     peers = [],
     pieces = Array(pieceCount).fill(0),
     downloadDir = "./",
   }: DownloadParams) {
     this.downloadDir = downloadDir;
-    this.maxDownloaders = maxDownloaders;
+    this.maxUploaders = maxUploaders;
     this.peers = peers;
     this.pieces = pieces;
 
@@ -70,7 +70,7 @@ export class Download {
     let count = 0;
 
     this.peers.forEach((peer) => {
-      if (count < this.maxDownloaders) {
+      if (count < this.maxUploaders) {
         peer.download();
         count++;
       }

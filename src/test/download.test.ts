@@ -56,7 +56,7 @@ describe("Download", () => {
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
       pieceCount: 0,
-      maxDownloaders: 2,
+      maxUploaders: 2,
       peers: [firstPeer, secondPeer, thirdPeer],
     });
 
@@ -77,7 +77,7 @@ describe("Download", () => {
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
       pieceCount: 0,
-      maxDownloaders: 2,
+      maxUploaders: 2,
       peers: [firstPeer, secondPeer],
     });
 
@@ -100,7 +100,7 @@ describe("Download", () => {
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
       pieceCount: 0,
-      maxDownloaders: 2,
+      maxUploaders: 2,
       peers: [peer],
       pieces: [2, 2],
     });
@@ -125,7 +125,7 @@ describe("Download", () => {
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
       pieceCount: 0,
-      maxDownloaders: 2,
+      maxUploaders: 2,
       peers: [peer],
       pieces: [2, 2],
       downloadDir,
