@@ -5,6 +5,7 @@ import { join } from "path";
 import { tmpdir } from "os";
 
 import { Download } from "../download";
+import { Info } from "../info";
 import { Peer } from "../peer";
 
 describe("Download", () => {
@@ -18,7 +19,7 @@ describe("Download", () => {
       data: { peers: [peer] },
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
-      pieceCount: 0,
+      info: buildInfo(),
     });
 
     expect(download.peers[0].ip).toEqual(peer.ip);
@@ -29,7 +30,7 @@ describe("Download", () => {
       data: { peers: [{ ip: Buffer.from("192.168.2.1") }] },
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
-      pieceCount: 0,
+      info: buildInfo(),
     });
 
     expect(download.peers).toEqual([]);
@@ -42,7 +43,7 @@ describe("Download", () => {
         data,
         infoHash: Buffer.from("infoHash"),
         clientId: Buffer.from("clientId"),
-        pieceCount: 0,
+        info: buildInfo(),
       });
     }).not.toThrow();
   });
@@ -55,7 +56,7 @@ describe("Download", () => {
       data: {},
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
-      pieceCount: 0,
+      info: buildInfo(),
       maxUploaders: 2,
       peers: [firstPeer, secondPeer, thirdPeer],
     });
@@ -76,7 +77,7 @@ describe("Download", () => {
       data: {},
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
-      pieceCount: 0,
+      info: buildInfo(),
       maxUploaders: 2,
       peers: [firstPeer, secondPeer],
     });
@@ -99,7 +100,7 @@ describe("Download", () => {
       data: {},
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
-      pieceCount: 0,
+      info: buildInfo(),
       maxUploaders: 2,
       peers: [peer],
       pieces: [2, 2],
@@ -124,7 +125,7 @@ describe("Download", () => {
       data: {},
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
-      pieceCount: 0,
+      info: buildInfo(),
       maxUploaders: 2,
       peers: [peer],
       pieces: [2, 2],
@@ -141,6 +142,13 @@ describe("Download", () => {
     return await fs.mkdtemp(join(tmpdir(), "bits-"));
   }
 
+  function buildInfo() {
+    return new Info({
+      "piece length": 262144,
+      pieces: Buffer.alloc(20),
+    });
+  }
+
   function buildMockPeer(downloadMock: () => void = jest.fn()) {
     const mockPeer = class extends Peer {
       download = downloadMock;
@@ -153,6 +161,7 @@ describe("Download", () => {
       id: Buffer.from("id"),
       clientId: Buffer.from("clientId"),
       pieces: [],
+      pieceLength: 262144,
     });
   }
 });

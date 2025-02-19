@@ -14,6 +14,7 @@ export type PeerParams = {
   id: Buffer;
   clientId: Buffer;
   pieces: PieceState[];
+  pieceLength: number;
   state?: PeerState;
   bitfield?: Bitfield;
   currentPiece?: number | null;
@@ -46,8 +47,10 @@ export class Peer extends EventEmitter {
   bitfield: Bitfield | undefined;
   chunks: Buffer[];
   pieces: PieceState[];
+  pieceLength: number;
   currentPiece: number | null;
   downloadDir: string;
+  chunkLength: number;
 
   constructor({
     ip,
@@ -56,6 +59,7 @@ export class Peer extends EventEmitter {
     id,
     clientId,
     pieces,
+    pieceLength,
     state = PeerState.Disconnected,
     bitfield,
     currentPiece = null,
@@ -76,6 +80,8 @@ export class Peer extends EventEmitter {
     this.downloadDir = downloadDir;
     this.currentPiece = currentPiece;
     this.chunks = chunks;
+    this.pieceLength = pieceLength;
+    this.chunkLength = 16384;
 
     this.connection.on("message", async (data) => {
       await this.receive(data);
@@ -163,10 +169,13 @@ export class Peer extends EventEmitter {
       logger.debug("Received chunk");
       this.chunks.push(message.body());
 
-      // 262144 / 16384 = 16 (piece length / chunk length)
-      if (this.chunks.length < 16 && this.currentPiece != null) {
+      const chunksNeeded = Math.ceil(this.pieceLength / this.chunkLength);
+      if (this.chunks.length < chunksNeeded && this.currentPiece != null) {
         this.requestPieceChunk(this.currentPiece);
-      } else if (this.chunks.length === 16 && this.currentPiece != null) {
+      } else if (
+        this.chunks.length === chunksNeeded &&
+        this.currentPiece != null
+      ) {
         await fs.writeFile(
           `${this.downloadDir}/${this.currentPiece}`,
           Buffer.concat(this.chunks)
@@ -189,8 +198,8 @@ export class Peer extends EventEmitter {
     request.writeUInt32BE(13); // Write length prefix (does not include length itself)
     request.writeUInt8(6, 4); // Write message type (value, offset)
     request.writeUInt32BE(pieceIndex, 5); // Write piece index
-    request.writeUInt32BE(this.chunks.length * 16384, 9); // Write begin (chunk index * chunk length)
-    request.writeUInt32BE(16384, 13); // Write length (16 KB)
+    request.writeUInt32BE(this.chunks.length * this.chunkLength, 9); // Write begin (chunk index * chunk length)
+    request.writeUInt32BE(this.chunkLength, 13); // Write length (16 KB)
     this.connection.write(request);
   }
 

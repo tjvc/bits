@@ -26,7 +26,7 @@ async function main() {
     data: new BData(trackerResponse).decode(),
     infoHash: infoHash.raw,
     clientId: Buffer.from(peerId),
-    pieceCount: torrent.info().pieceCount(),
+    info: torrent.info(),
   });
 
   download.start();

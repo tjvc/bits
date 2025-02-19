@@ -1,13 +1,14 @@
 import fs from "fs/promises";
 
 import { BDecoded, BDict, BList } from "./b_data";
+import { Info } from "./info";
 import { Peer, PieceState } from "./peer";
 
 interface DownloadParams {
   data: BDecoded;
   infoHash: Buffer;
   clientId: Buffer;
-  pieceCount: number;
+  info: Info;
   maxUploaders?: number;
   peers?: Peer[];
   pieces?: PieceState[];
@@ -24,10 +25,10 @@ export class Download {
     data,
     infoHash,
     clientId,
-    pieceCount,
+    info,
     maxUploaders = 3,
     peers = [],
-    pieces = Array(pieceCount).fill(0),
+    pieces = Array(info.pieceCount()).fill(0),
     downloadDir = "./",
   }: DownloadParams) {
     this.downloadDir = downloadDir;
@@ -46,6 +47,7 @@ export class Download {
               id: peer["peer id"],
               clientId,
               pieces: this.pieces,
+              pieceLength: info.pieceLength(),
             })
           );
         }

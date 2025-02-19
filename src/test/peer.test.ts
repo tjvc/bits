@@ -240,6 +240,7 @@ describe("Peer", () => {
       pieces: [],
       bitfield: new Bitfield(Buffer.alloc(0)),
       downloadDir: args.downloadDir || (await makeDownloadDir()),
+      pieceLength: 262144,
     };
 
     const peer = new Peer({ ...defaults, ...args });
