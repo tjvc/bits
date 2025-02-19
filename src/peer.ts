@@ -39,17 +39,17 @@ export enum PieceState {
 export class Peer extends EventEmitter {
   ip: Buffer;
   port: number;
-  id: Buffer;
   infoHash: Buffer;
-  connection: PeerConnection;
-  state: PeerState;
+  id: Buffer;
   clientId: Buffer;
-  bitfield: Bitfield | undefined;
-  chunks: Buffer[];
   pieces: PieceState[];
   pieceLength: number;
+  state: PeerState;
+  bitfield: Bitfield | undefined;
   currentPiece: number | null;
   downloadDir: string;
+  chunks: Buffer[];
+  connection: PeerConnection;
   chunkLength: number;
 
   constructor({
@@ -70,17 +70,17 @@ export class Peer extends EventEmitter {
 
     this.ip = ip;
     this.port = port;
-    this.connection = new PeerConnection(ip, port);
     this.infoHash = infoHash;
     this.id = id;
     this.clientId = clientId;
-    this.state = state;
     this.pieces = pieces;
-    this.bitfield = bitfield;
-    this.downloadDir = downloadDir;
-    this.currentPiece = currentPiece;
-    this.chunks = chunks;
     this.pieceLength = pieceLength;
+    this.state = state;
+    this.bitfield = bitfield;
+    this.currentPiece = currentPiece;
+    this.downloadDir = downloadDir;
+    this.connection = new PeerConnection(ip, port);
+    this.chunks = chunks;
     this.chunkLength = 16384;
 
     this.connection.on("message", async (data) => {
