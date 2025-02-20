@@ -36,6 +36,10 @@ export enum PieceState {
   Downloaded = 2,
 }
 
+export enum FailureReason {
+  ConnectionRefused = "CONNECTION_REFUSED",
+}
+
 export class Peer extends EventEmitter {
   ip: Buffer;
   port: number;
@@ -51,6 +55,7 @@ export class Peer extends EventEmitter {
   chunks: Buffer[];
   connection: PeerConnection;
   chunkLength: number;
+  failureReason: FailureReason | null;
 
   constructor({
     ip,
@@ -82,6 +87,7 @@ export class Peer extends EventEmitter {
     this.connection = new PeerConnection(ip, port);
     this.chunks = chunks;
     this.chunkLength = 16384;
+    this.failureReason = null;
 
     this.connection.on("message", async (data) => {
       await this.receive(data);
@@ -101,6 +107,9 @@ export class Peer extends EventEmitter {
 
     this.connection.on("error", (error) => {
       logger.error("Connection error", error);
+      if (error.code === "ECONNREFUSED") {
+        this.failureReason = FailureReason.ConnectionRefused;
+      }
       this.connection.close();
     });
   }
