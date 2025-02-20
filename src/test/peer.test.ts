@@ -7,6 +7,9 @@ import { tmpdir } from "os";
 import { Handshake } from "../handshake";
 import { Peer, PeerParams, PeerState, PieceState } from "../peer";
 import { Bitfield } from "../bitfield";
+import { logger } from "../logger";
+
+type TestError = Error & { code: string };
 
 describe("Peer", () => {
   test("initialises a connection with the peer's IP and port", async () => {
@@ -61,16 +64,18 @@ describe("Peer", () => {
     );
   });
 
-  describe("on connection error", () => {
-    test("it logs the error and closes the connection", async () => {
+  describe("on connection refused error", () => {
+    test("sets the peer state and failure reason, logs the error, and closes the connection", async () => {
       const peer = await buildPeer({ state: PeerState.Connected });
-      const error = new Error("Connection error");
+      const error = new Error("connect ECONNREFUSED");
+      (error as TestError).code = "ECONNREFUSED";
       peer.connection.close = jest.fn<typeof peer.connection.close>();
-      console.error = jest.fn();
+      logger.error = jest.fn();
 
       peer.connection.emit("error", error);
 
-      expect(console.error).toHaveBeenCalledWith(
+      expect(peer.failureReason).toEqual("CONNECTION_REFUSED");
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining("Connection error"),
         error
       );
