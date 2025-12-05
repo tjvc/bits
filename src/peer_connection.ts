@@ -43,46 +43,39 @@ export class PeerConnection extends EventEmitter {
   receive(data: Buffer) {
     logger.debug("Received data:", data);
 
-    while (data.length > 0) {
-      if (this.buffer.length > 0) {
-        // If there is an incomplete message in the buffer, try to complete it
-        const messageLength = this.buffer.readUInt32BE(0);
-        const messageLengthWithPrefix = messageLength + 4;
-        const remainingLength = messageLengthWithPrefix - this.buffer.length;
+    // Append all new data to buffer first
+    this.buffer = Buffer.concat([this.buffer, data]);
 
-        // Append data up to the remaining length to the buffer
-        this.buffer = Buffer.concat([
-          this.buffer,
-          data.slice(0, remainingLength),
-        ]);
-
-        data = data.slice(remainingLength);
-
-        // If the message is complete, emit a message event and reset the buffer
-        if (this.buffer.length === messageLengthWithPrefix) {
-          this.emit("message", this.buffer);
-          this.buffer = Buffer.alloc(0);
-        }
-
-        continue;
-      } else {
-        // If there is no data in the buffer, assume we have a new message
-
-        // We assume a handshake will always be a first message
-        const length = data.slice(0, 20).equals(Handshake.header)
-          ? 68 // Header (20) + Reserved (8) + Info hash (20) + Peer ID (20)
-          : data.readUInt32BE(0) + 4;
-
-        // If the message is incomplete, append it to the buffer and wait for more data
-        if (length > data.length) {
-          this.buffer = Buffer.concat([this.buffer, data]);
+    // Try to extract complete messages from buffer
+    while (this.buffer.length > 0) {
+      // Check if this is a handshake (starts with header)
+      if (this.buffer.slice(0, 20).equals(Handshake.header)) {
+        const handshakeLength = 68;
+        if (this.buffer.length < handshakeLength) {
+          // Incomplete handshake, wait for more data
           return;
         }
-
-        // If the message is complete, emit a message event
-        this.emit("message", data.slice(0, length));
-        data = data.slice(length);
+        // Complete handshake
+        this.emit("message", this.buffer.slice(0, handshakeLength));
+        this.buffer = this.buffer.slice(handshakeLength);
+        continue;
       }
+
+      // Regular length-prefixed message
+      if (this.buffer.length < 4) {
+        // Not enough data for length prefix
+        return;
+      }
+
+      const messageLength = this.buffer.readUInt32BE(0) + 4;
+      if (this.buffer.length < messageLength) {
+        // Incomplete message, wait for more data
+        return;
+      }
+
+      // Complete message
+      this.emit("message", this.buffer.slice(0, messageLength));
+      this.buffer = this.buffer.slice(messageLength);
     }
   }
 

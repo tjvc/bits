@@ -89,6 +89,60 @@ describe("PeerConnection", () => {
       ]);
     }
 
+    describe("with an empty buffer and incomplete message header", () => {
+      test("buffers the data and waits for more", () => {
+        const socket = new Socket();
+        const peerConnection = createPeerConnection(socket);
+        const message = Buffer.from("hi");
+        const messageSpy = jest.fn();
+        peerConnection.on("message", messageSpy);
+
+        socket.emit("data", message);
+
+        expect(messageSpy).not.toHaveBeenCalled();
+        expect(peerConnection.buffer).toEqual(message);
+      });
+    });
+
+    // TODO: We probably need some validation on message length
+    describe("with a huge invalid length prefix", () => {
+      test("buffers and waits for the impossibly large message", () => {
+        const socket = new Socket();
+        const peerConnection = createPeerConnection(socket);
+
+        // Create a message with an impossibly large length (4GB)
+        const hugeLength = Buffer.alloc(4);
+        hugeLength.writeUInt32BE(0xffffffff, 0);
+
+        const messageSpy = jest.fn();
+        peerConnection.on("message", messageSpy);
+
+        socket.emit("data", hugeLength);
+
+        // The code will buffer this and wait for 4GB of data
+        expect(messageSpy).not.toHaveBeenCalled();
+        expect(peerConnection.buffer.length).toBe(4);
+      });
+    });
+
+    describe("with zero length prefix", () => {
+      test("emits the length prefix as a message", () => {
+        const socket = new Socket();
+        const peerConnection = createPeerConnection(socket);
+
+        // Zero-length message (4 bytes of 0x00)
+        const zeroLength = Buffer.alloc(4);
+
+        const messageSpy = jest.fn();
+        peerConnection.on("message", messageSpy);
+
+        socket.emit("data", zeroLength);
+
+        expect(messageSpy).toHaveBeenCalledTimes(1);
+        expect(messageSpy).toHaveBeenCalledWith(zeroLength);
+      });
+    });
+
     describe("with an empty buffer and a complete message", () => {
       test("emits a message event with the message data", () => {
         const socket = new Socket();
@@ -210,22 +264,6 @@ describe("PeerConnection", () => {
       });
     });
 
-    // TODO: Catch and throw a more specific error
-    describe("with a message without a valid length", () => {
-      test("throws an error and does not emit a message event", () => {
-        const socket = new Socket();
-        const peerConnection = createPeerConnection(socket);
-        const message = Buffer.from("hi");
-        const messageSpy = jest.fn();
-        peerConnection.on("message", messageSpy);
-
-        expect(() => {
-          socket.emit("data", message);
-        }).toThrowError();
-        expect(messageSpy).not.toHaveBeenCalled();
-      });
-    });
-
     describe("with a handshake message", () => {
       test("emits a message event with the handshake message", () => {
         const socket = new Socket();
@@ -275,6 +313,27 @@ describe("PeerConnection", () => {
         expect(messageSpy).toHaveBeenCalledTimes(1);
         expect(messageSpy).toHaveBeenCalledWith(handshakeMessage);
         expect(peerConnection.buffer).toEqual(incompleteMessage);
+      });
+    });
+
+    describe("with a handshake header split across multiple packets", () => {
+      test("emits a message event with the complete handshake", () => {
+        const socket = new Socket();
+        const peerConnection = createPeerConnection(socket);
+        const handshakeMessage = createHandshake();
+        const firstChunk = handshakeMessage.slice(0, 30);
+        const secondChunk = handshakeMessage.slice(30);
+        const messageSpy = jest.fn();
+        peerConnection.on("message", messageSpy);
+
+        socket.emit("data", firstChunk);
+        expect(messageSpy).not.toHaveBeenCalled();
+        expect(peerConnection.buffer.length).toBe(30);
+
+        socket.emit("data", secondChunk);
+        expect(messageSpy).toHaveBeenCalledTimes(1);
+        expect(messageSpy).toHaveBeenCalledWith(handshakeMessage);
+        expect(peerConnection.buffer).toEqual(Buffer.alloc(0));
       });
     });
 
