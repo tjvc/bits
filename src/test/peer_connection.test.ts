@@ -337,6 +337,33 @@ describe("PeerConnection", () => {
       });
     });
 
+    describe("with a partial handshake header split across multiple packets", () => {
+      test("emits a message event with the complete handshake", () => {
+        const socket = new Socket();
+        const peerConnection = createPeerConnection(socket);
+        const handshakeMessage = createHandshake();
+        // Split within the 20-byte header (first 10 bytes)
+        // Header starts with 0x13 'BitTorrent protocol'
+        // First 4 bytes: [0x13, 0x42, 0x69, 0x74] = 322,486,644
+        // messageLength = 322,486,644 + 4 = 322,486,648
+        // This is much larger than 68, so we will wait for more data
+        // and eventually the full 20-byte header check will succeed.
+        const firstChunk = handshakeMessage.slice(0, 10);
+        const secondChunk = handshakeMessage.slice(10);
+        const messageSpy = jest.fn();
+        peerConnection.on("message", messageSpy);
+
+        socket.emit("data", firstChunk);
+        expect(messageSpy).not.toHaveBeenCalled();
+        expect(peerConnection.buffer.length).toBe(10);
+
+        socket.emit("data", secondChunk);
+        expect(messageSpy).toHaveBeenCalledTimes(1);
+        expect(messageSpy).toHaveBeenCalledWith(handshakeMessage);
+        expect(peerConnection.buffer).toEqual(Buffer.alloc(0));
+      });
+    });
+
     describe("with a keepalive message", () => {
       test.todo("does not emit a message event");
     });
