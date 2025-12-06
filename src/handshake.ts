@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 export class Handshake {
   static readonly header = Buffer.from("\x13BitTorrent protocol");
 
@@ -24,10 +26,10 @@ export class Handshake {
     const infoHash = data.subarray(28, 48);
     const peerId = data.subarray(48, 68);
 
-    return (
-      header.equals(Handshake.header) &&
-      infoHash.equals(this.infoHash) &&
-      peerId.equals(this.peerId)
-    );
+    if (!peerId.equals(this.peerId)) {
+      logger.warn("Peer ID in handshake does not match expected value");
+    }
+
+    return header.equals(Handshake.header) && infoHash.equals(this.infoHash);
   }
 }

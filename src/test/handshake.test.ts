@@ -1,6 +1,7 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 
 import { Handshake } from "../handshake";
+import { logger } from "../logger";
 
 describe("Handshake", () => {
   describe("data", () => {
@@ -74,7 +75,7 @@ describe("Handshake", () => {
       expect(handshake.matches(data)).toBe(false);
     });
 
-    test("it returns false if peerId does not match", () => {
+    test("it returns true and logs a warning when peer ID does not match", () => {
       const header = Buffer.from("\x13BitTorrent protocol");
       const reservedBytes = Buffer.from("\x00\x00\x00\x00\x00\x00\x00\x00");
       const infoHash = Buffer.alloc(20, 1);
@@ -86,10 +87,17 @@ describe("Handshake", () => {
         infoHash,
         theirPeerId,
       ]);
+      const warnSpy = jest.spyOn(logger, "warn");
 
       const handshake = new Handshake(infoHash, ourPeerId);
 
-      expect(handshake.matches(data)).toBe(false);
+      expect(handshake.matches(data)).toBe(true);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "Peer ID in handshake does not match expected value"
+        )
+      );
+      warnSpy.mockRestore();
     });
   });
 });
