@@ -11,7 +11,7 @@ export type PeerParams = {
   ip: Buffer;
   port: number;
   infoHash: Buffer;
-  id: Buffer;
+  id: Buffer | undefined;
   clientId: Buffer;
   pieces: PieceState[];
   pieceLength: number;
@@ -44,7 +44,7 @@ export class Peer extends EventEmitter {
   ip: Buffer;
   port: number;
   infoHash: Buffer;
-  id: Buffer;
+  id: Buffer | undefined;
   clientId: Buffer;
   pieces: PieceState[];
   pieceLength: number;

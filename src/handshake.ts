@@ -7,9 +7,9 @@ export class Handshake {
   infoHash: Buffer;
   peerId: Buffer;
 
-  constructor(infoHash: Buffer, peerId: Buffer) {
+  constructor(infoHash: Buffer, peerId: Buffer | undefined) {
     this.infoHash = infoHash;
-    this.peerId = peerId;
+    this.peerId = peerId || Buffer.alloc(20, 0);
   }
 
   data(): Buffer {
