@@ -7,33 +7,55 @@ import { tmpdir } from "os";
 import { Download } from "../download";
 import { Info } from "../info";
 import { Peer } from "../peer";
+import { logger } from "../logger";
 
 describe("Download", () => {
   test("initialises valid peers", async () => {
-    const peer = {
+    const peerWithID = {
       ip: Buffer.from("192.168.2.1"),
       port: 54321,
       "peer id": Buffer.from("peerId"),
     };
+    const peerWithoutID = {
+      ip: Buffer.from("192.168.2.2"),
+      port: 54321,
+    };
     const download = new Download({
+      data: { peers: [peerWithID, peerWithoutID] },
+      infoHash: Buffer.from("infoHash"),
+      clientId: Buffer.from("clientId"),
+      info: buildInfo(),
+    });
+
+    expect(download.peers.length).toEqual(2);
+    expect(download.peers[0].ip).toEqual(peerWithID.ip);
+    expect(download.peers[0].port).toEqual(peerWithID.port);
+    expect(download.peers[0].id).toEqual(peerWithID["peer id"]);
+    expect(download.peers[1].ip).toEqual(peerWithoutID.ip);
+    expect(download.peers[1].port).toEqual(peerWithoutID.port);
+    expect(download.peers[1].id).toEqual(undefined);
+  });
+
+  test("logs a warning when peer data does not include a peer ID", async () => {
+    const warnSpy = jest.spyOn(logger, "warn").mockImplementation(jest.fn());
+    const peer = {
+      ip: Buffer.from("192.168.2.1"),
+      port: 54321,
+    };
+
+    new Download({
       data: { peers: [peer] },
       infoHash: Buffer.from("infoHash"),
       clientId: Buffer.from("clientId"),
       info: buildInfo(),
     });
 
-    expect(download.peers[0].ip).toEqual(peer.ip);
-  });
-
-  test("does not initialise invalid peers", async () => {
-    const download = new Download({
-      data: { peers: [{ ip: Buffer.from("192.168.2.1") }] },
-      infoHash: Buffer.from("infoHash"),
-      clientId: Buffer.from("clientId"),
-      info: buildInfo(),
-    });
-
-    expect(download.peers).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `Peer data for ${peer.ip} does not include peer ID`
+      )
+    );
+    warnSpy.mockRestore();
   });
 
   test("does not error when initialised with unexpected data types", async () => {

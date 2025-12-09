@@ -2,6 +2,7 @@ import fs from "fs/promises";
 
 import { BDecoded, BDict, BList } from "./b_data";
 import { Info } from "./info";
+import { logger } from "./logger";
 import { Peer, PieceState } from "./peer";
 
 interface DownloadParams {
@@ -105,12 +106,20 @@ export class Download {
 
   private isPeer(
     data: BDecoded
-  ): data is { ip: Buffer; port: number; "peer id": Buffer } {
+  ): data is { ip: Buffer; port: number; "peer id"?: Buffer } {
+    if (!this.isBDict(data)) {
+      return false;
+    }
+
+    if (data["peer id"] == undefined) {
+      logger.warn(`Peer data for ${data.ip} does not include peer ID`);
+    }
+
     return (
       this.isBDict(data) &&
       Buffer.isBuffer(data.ip) &&
       typeof data.port === "number" &&
-      Buffer.isBuffer(data["peer id"])
+      (data["peer id"] == undefined || Buffer.isBuffer(data["peer id"]))
     );
   }
 }
