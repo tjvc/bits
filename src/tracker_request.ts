@@ -30,14 +30,8 @@ export class TrackerRequest {
     // info_hash is already percent-encoded, so add it manually
     url.search += "&info_hash=" + this.infoHash.urlEncode();
 
-    return new Promise((resolve) => {
-      const protocol = url.protocol === "https:" ? https : http;
-
-      protocol.get(url, (res) => {
-        res.on("data", (data) => {
-          resolve(data);
-        });
-      });
-    });
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
   }
 }
