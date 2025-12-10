@@ -39,28 +39,6 @@ describe("Download", () => {
     expect(download.peers[1].id).toEqual(undefined);
   });
 
-  test("logs a warning when peer data does not include a peer ID", async () => {
-    const warnSpy = jest.spyOn(logger, "warn").mockImplementation(jest.fn());
-    const peer = {
-      ip: Buffer.from("192.168.2.1"),
-      port: 54321,
-    };
-
-    new Download({
-      data: { peers: [peer] },
-      infoHash: Buffer.from("infoHash"),
-      clientId: Buffer.from("clientId"),
-      info: buildInfo(),
-    });
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        `Peer data for ${peer.ip} does not include peer ID`
-      )
-    );
-    warnSpy.mockRestore();
-  });
-
   test("does not error when initialised with unexpected data types", async () => {
     const data = Buffer.from("test");
     expect(() => {

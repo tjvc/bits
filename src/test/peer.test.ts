@@ -12,6 +12,19 @@ import { logger } from "../logger";
 type TestError = Error & { code: string };
 
 describe("Peer", () => {
+  test("logs a warning when peer data does not include a peer ID", async () => {
+    const warnSpy = jest.spyOn(logger, "warn").mockImplementation(jest.fn());
+
+    const peer = await buildPeer({ id: undefined });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `Peer data for ${peer.ip} does not include peer ID`
+      )
+    );
+    warnSpy.mockRestore();
+  });
+
   test("initialises a connection with the peer's IP and port", async () => {
     const peer = await buildPeer();
 

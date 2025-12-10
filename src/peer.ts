@@ -73,6 +73,10 @@ export class Peer extends EventEmitter {
   }: PeerParams) {
     super();
 
+    if (id == undefined) {
+      logger.warn(`Peer data for ${ip} does not include peer ID`);
+    }
+
     this.ip = ip;
     this.port = port;
     this.infoHash = infoHash;

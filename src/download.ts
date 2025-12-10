@@ -111,10 +111,6 @@ export class Download {
       return false;
     }
 
-    if (data["peer id"] == undefined) {
-      logger.warn(`Peer data for ${data.ip} does not include peer ID`);
-    }
-
     return (
       this.isBDict(data) &&
       Buffer.isBuffer(data.ip) &&
