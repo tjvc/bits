@@ -2,7 +2,6 @@ import { EventEmitter } from "events";
 import { Socket } from "net";
 
 import { Handshake } from "./handshake";
-import { logger } from "./logger";
 
 export class PeerConnection extends EventEmitter {
   ip: Buffer;
@@ -41,8 +40,6 @@ export class PeerConnection extends EventEmitter {
   }
 
   receive(data: Buffer) {
-    logger.debug("Received data:", data);
-
     // Append all new data to buffer first
     this.buffer = Buffer.concat([this.buffer, data]);
 
