@@ -127,7 +127,7 @@ export class Peer extends EventEmitter {
   }
 
   sendHandshake() {
-    logger.debug("Sending handshake");
+    logger.debug("Sending handshake to", this.ip.toString());
     const handshake = new Handshake(this.infoHash, this.clientId);
     this.connection.write(handshake.data());
   }
@@ -137,7 +137,7 @@ export class Peer extends EventEmitter {
       const expectedHandshake = new Handshake(this.infoHash, this.id);
 
       if (expectedHandshake.matches(data)) {
-        logger.debug("Received handshake");
+        logger.debug("Received handshake from", this.ip.toString());
         this.state = PeerState.HandshakeCompleted;
         return;
       }
@@ -146,18 +146,21 @@ export class Peer extends EventEmitter {
     const message = new Message(data);
 
     if (message.type() === MessageType.Bitfield) {
-      logger.debug("Received bitfield");
+      logger.debug("Received bitfield from", this.ip.toString());
       if (this.state != PeerState.HandshakeCompleted) {
-        logger.debug("Received bitfield before handshake");
+        logger.debug(
+          "Received bitfield before handshake from",
+          this.ip.toString()
+        );
         this.connection.close();
-        logger.debug("Connection closed");
+        logger.debug("Connection to", this.ip.toString(), "closed");
         return;
       }
 
       this.bitfield = new Bitfield(message.body());
 
       if (this.nextPiece() != null) {
-        logger.debug("Sending interested");
+        logger.debug("Sending interested to", this.ip.toString());
         this.connection.write(Buffer.from([0, 0, 0, 1, 2]));
       } else {
         this.connection.close();
@@ -166,12 +169,17 @@ export class Peer extends EventEmitter {
     }
 
     if (message.type() === MessageType.Unchoke) {
-      logger.debug("Received unchoke");
+      logger.debug("Received unchoke from", this.ip.toString());
       this.state = PeerState.Unchoked;
 
       this.currentPiece = this.nextPiece();
       if (this.currentPiece != null) {
-        logger.debug("Requesting piece", this.currentPiece);
+        logger.debug(
+          "Requesting piece",
+          this.currentPiece,
+          "from",
+          this.ip.toString()
+        );
         this.requestPieceChunk(this.currentPiece);
         this.state = PeerState.Downloading;
         this.pieces[this.currentPiece] = PieceState.Downloading;
@@ -179,7 +187,14 @@ export class Peer extends EventEmitter {
     }
 
     if (message.type() === MessageType.Piece) {
-      logger.debug("Received chunk");
+      logger.debug(
+        "Received chunk",
+        this.chunks.length,
+        "of piece",
+        this.currentPiece as number,
+        "from",
+        this.ip.toString()
+      );
       this.chunks.push(message.body());
 
       const chunksNeeded = Math.ceil(this.pieceLength / this.chunkLength);
@@ -206,7 +221,11 @@ export class Peer extends EventEmitter {
   }
 
   requestPieceChunk(pieceIndex: number) {
-    logger.debug("Requesting chunk");
+    logger.debug(
+      `Requesting chunk ${
+        this.chunks.length
+      } of piece ${pieceIndex} from ${this.ip.toString()}`
+    );
     const request = Buffer.alloc(17); // Allocate 17 byte buffer
     request.writeUInt32BE(13); // Write length prefix (does not include length itself)
     request.writeUInt8(6, 4); // Write message type (value, offset)
