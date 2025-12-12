@@ -48,4 +48,31 @@ describe("Message", () => {
       expect(message.type()).toBe(MessageType.Bitfield);
     });
   });
+
+  describe("typeName", () => {
+    test("returns 'Unknown' when data length is less than 5 bytes", () => {
+      const data = Buffer.alloc(4);
+      const message = new Message(data);
+
+      expect(message.typeName()).toBe("Unknown");
+    });
+
+    test("returns formatted name for single word types", () => {
+      const data = Buffer.alloc(5);
+      data.writeUInt32BE(5, 0);
+      data.writeUInt8(MessageType.Choke, 4);
+      const message = new Message(data);
+
+      expect(message.typeName()).toBe("Choke");
+    });
+
+    test("returns formatted name for camelCase types", () => {
+      const data = Buffer.alloc(5);
+      data.writeUInt32BE(5, 0);
+      data.writeUInt8(MessageType.NotInterested, 4);
+      const message = new Message(data);
+
+      expect(message.typeName()).toBe("Not Interested");
+    });
+  });
 });

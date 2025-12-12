@@ -217,6 +217,15 @@ export class Peer extends EventEmitter {
           this.requestPieceChunk(this.currentPiece);
         }
       }
+      return;
+    }
+
+    if (message.type() !== null) {
+      logger.warn(
+        `Received unhandled ${message
+          .typeName()
+          .toLowerCase()} message from ${this.ip.toString()}`
+      );
     }
   }
 

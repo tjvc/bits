@@ -243,6 +243,19 @@ describe("Peer", () => {
     "when it finishes downloading a piece and there are no more required pieces, it closes the connection"
   );
 
+  test("logs a warning when receiving an unhandled message type", async () => {
+    const peer = await buildPeer({ state: PeerState.HandshakeCompleted });
+    const warnSpy = jest.spyOn(logger, "warn").mockImplementation(jest.fn());
+
+    // Send a choke message (type 0), which is not currently handled
+    await peer.receive(Buffer.from("0000000100", "hex"));
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      `Received unhandled choke message from ${peer.ip.toString()}`
+    );
+    warnSpy.mockRestore();
+  });
+
   async function makeDownloadDir() {
     return await fs.mkdtemp(join(tmpdir(), "bits-"));
   }
