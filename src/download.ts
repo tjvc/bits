@@ -62,11 +62,37 @@ export class Download {
       });
 
       peer.on("pieceDownloaded", async () => {
+        const downloadedCount = this.pieces.filter(
+          (p) => p === PieceState.Downloaded
+        ).length;
+        logger.debug(
+          `Downloaded ${downloadedCount} of ${this.pieces.length} pieces`
+        );
+
         if (this.pieces.every((piece) => piece === PieceState.Downloaded)) {
           await this.finish();
         }
       });
+
+      peer.on("messageReceived", () => {
+        this.logPeerStatus();
+      });
     });
+  }
+
+  private logPeerStatus() {
+    const activePeers = this.peers.filter((p) => p.currentPiece !== null);
+
+    if (activePeers.length === 0) {
+      logger.debug("Downloading 0 pieces from 0 peers");
+    } else {
+      logger.debug(
+        `Downloading ${activePeers.length} pieces from ${activePeers.length} peers:`
+      );
+      activePeers.forEach((p) => {
+        logger.debug(`  Piece ${p.currentPiece} from ${p.ip.toString()}`);
+      });
+    }
   }
 
   start() {

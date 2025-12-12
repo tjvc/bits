@@ -133,6 +133,8 @@ export class Peer extends EventEmitter {
   }
 
   async receive(data: Buffer) {
+    this.emit("messageReceived");
+
     if (this.state == PeerState.Connected) {
       const expectedHandshake = new Handshake(this.infoHash, this.id);
 
