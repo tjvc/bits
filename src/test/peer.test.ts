@@ -1,17 +1,38 @@
-import { describe, expect, jest, test } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  test,
+} from "@jest/globals";
 
 import fs from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 
 import { Handshake } from "../handshake";
-import { Peer, PeerParams, PeerState, PieceState } from "../peer";
+import {
+  Peer,
+  PeerParams,
+  PeerState,
+  PIECE_DOWNLOAD_TIMEOUT_MS,
+  PieceState,
+} from "../peer";
 import { Bitfield } from "../bitfield";
 import { logger } from "../logger";
 
 type TestError = Error & { code: string };
 
 describe("Peer", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   test("logs a warning when peer data does not include a peer ID", async () => {
     const warnSpy = jest.spyOn(logger, "warn").mockImplementation(jest.fn());
 
@@ -278,6 +299,81 @@ describe("Peer", () => {
       `Received unhandled choke message from ${peer.ip.toString()}`
     );
     warnSpy.mockRestore();
+  });
+
+  describe("piece download timeout", () => {
+    test("disconnects and resets piece state when piece download times out", async () => {
+      const pieces = [0, 0];
+      const currentPiece = 0;
+      const peer = await buildPeer({
+        pieces,
+        currentPiece,
+        state: PeerState.Downloading,
+      });
+      const closeSpy = jest
+        .spyOn(peer.connection, "close")
+        .mockImplementation(jest.fn<typeof peer.connection.close>());
+      peer.on("disconnect", jest.fn());
+      peer.requestPieceChunk(currentPiece);
+      jest.advanceTimersByTime(PIECE_DOWNLOAD_TIMEOUT_MS);
+
+      expect(closeSpy).toHaveBeenCalled();
+      expect(peer.currentPiece).toBeNull();
+      expect(pieces[0]).toEqual(PieceState.Required);
+    });
+
+    test("resets timeout when receiving a piece chunk", async () => {
+      const pieces = [0];
+      const currentPiece = 0;
+      const peer = await buildPeer({
+        pieces,
+        currentPiece,
+        state: PeerState.Downloading,
+      });
+      const closeSpy = jest
+        .spyOn(peer.connection, "close")
+        .mockImplementation(jest.fn<typeof peer.connection.close>());
+      peer.connection.write = jest.fn<typeof peer.connection.write>();
+
+      peer.requestPieceChunk(currentPiece);
+      jest.advanceTimersByTime(PIECE_DOWNLOAD_TIMEOUT_MS / 2);
+      const chunkMessage = Buffer.concat([
+        Buffer.from("0000400007", "hex"), // 16 KB piece chunk
+        Buffer.alloc(16384, "0"),
+      ]);
+      await peer.receive(chunkMessage);
+      jest.advanceTimersByTime(PIECE_DOWNLOAD_TIMEOUT_MS / 2);
+
+      expect(closeSpy).not.toHaveBeenCalled();
+    });
+
+    test("clears timeout when piece download completes", async () => {
+      const pieces = [0];
+      const currentPiece = 0;
+      const pieceLength = 16384; // Single chunk piece
+      const peer = await buildPeer({
+        pieces,
+        currentPiece,
+        state: PeerState.Downloading,
+        pieceLength,
+      });
+      const closeSpy = jest
+        .spyOn(peer.connection, "close")
+        .mockImplementation(jest.fn<typeof peer.connection.close>());
+      peer.connection.write = jest.fn<typeof peer.connection.write>();
+
+      peer.requestPieceChunk(currentPiece);
+      const chunkMessage = Buffer.concat([
+        Buffer.from("0000400007", "hex"), // 16 KB piece chunk
+        Buffer.alloc(16384, "0"),
+      ]);
+      await peer.receive(chunkMessage);
+      jest.advanceTimersByTime(PIECE_DOWNLOAD_TIMEOUT_MS);
+
+      expect(peer.downloadTimeout).toBeNull();
+      expect(closeSpy).not.toHaveBeenCalled();
+      expect(pieces[0]).toEqual(PieceState.Downloaded);
+    });
   });
 
   async function makeDownloadDir() {

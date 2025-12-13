@@ -40,6 +40,8 @@ export enum FailureReason {
   ConnectionRefused = "CONNECTION_REFUSED",
 }
 
+export const PIECE_DOWNLOAD_TIMEOUT_MS = 15000;
+
 export class Peer extends EventEmitter {
   ip: Buffer;
   port: number;
@@ -56,6 +58,7 @@ export class Peer extends EventEmitter {
   connection: PeerConnection;
   chunkLength: number;
   failureReason: FailureReason | null;
+  downloadTimeout: NodeJS.Timeout | null;
 
   constructor({
     ip,
@@ -92,6 +95,7 @@ export class Peer extends EventEmitter {
     this.chunks = chunks;
     this.chunkLength = 16384;
     this.failureReason = null;
+    this.downloadTimeout = null;
 
     this.connection.on("message", async (data) => {
       await this.receive(data);
@@ -104,6 +108,7 @@ export class Peer extends EventEmitter {
     });
 
     this.connection.on("close", () => {
+      this.clearDownloadTimeout();
       this.state = PeerState.Disconnected;
       logger.debug("Connection closed by peer");
       this.emit("disconnect");
@@ -205,6 +210,9 @@ export class Peer extends EventEmitter {
         "from",
         this.ip.toString()
       );
+
+      this.clearDownloadTimeout();
+
       this.chunks.push(message.body());
 
       const chunksNeeded = Math.ceil(this.pieceLength / this.chunkLength);
@@ -245,6 +253,9 @@ export class Peer extends EventEmitter {
         this.chunks.length
       } of piece ${pieceIndex} from ${this.ip.toString()}`
     );
+
+    this.startDownloadTimeout();
+
     const request = Buffer.alloc(17); // Allocate 17 byte buffer
     request.writeUInt32BE(13); // Write length prefix (does not include length itself)
     request.writeUInt8(6, 4); // Write message type (value, offset)
@@ -260,5 +271,26 @@ export class Peer extends EventEmitter {
         piece === PieceState.Required && this.bitfield?.get(index)
     );
     return index > -1 ? index : null;
+  }
+
+  startDownloadTimeout() {
+    this.clearDownloadTimeout();
+    this.downloadTimeout = setTimeout(() => {
+      logger.warn(
+        `Piece download timed out for ${this.ip.toString()}, disconnecting`
+      );
+      if (this.currentPiece !== null) {
+        this.pieces[this.currentPiece] = PieceState.Required;
+        this.currentPiece = null;
+      }
+      this.connection.close();
+    }, PIECE_DOWNLOAD_TIMEOUT_MS);
+  }
+
+  clearDownloadTimeout() {
+    if (this.downloadTimeout !== null) {
+      clearTimeout(this.downloadTimeout);
+      this.downloadTimeout = null;
+    }
   }
 }
