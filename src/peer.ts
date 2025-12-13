@@ -168,24 +168,32 @@ export class Peer extends EventEmitter {
         this.connection.close();
         logger.debug("Connection closed");
       }
+      return;
     }
 
     if (message.type() === MessageType.Unchoke) {
       logger.debug("Received unchoke from", this.ip.toString());
-      this.state = PeerState.Unchoked;
 
-      this.currentPiece = this.nextPiece();
-      if (this.currentPiece != null) {
-        logger.debug(
-          "Requesting piece",
-          this.currentPiece,
-          "from",
-          this.ip.toString()
-        );
-        this.requestPieceChunk(this.currentPiece);
-        this.state = PeerState.Downloading;
-        this.pieces[this.currentPiece] = PieceState.Downloading;
+      if (
+        this.state !== PeerState.Unchoked &&
+        this.state !== PeerState.Downloading
+      ) {
+        this.state = PeerState.Unchoked;
+
+        this.currentPiece = this.nextPiece();
+        if (this.currentPiece != null) {
+          logger.debug(
+            "Requesting piece",
+            this.currentPiece,
+            "from",
+            this.ip.toString()
+          );
+          this.requestPieceChunk(this.currentPiece);
+          this.state = PeerState.Downloading;
+          this.pieces[this.currentPiece] = PieceState.Downloading;
+        }
       }
+      return;
     }
 
     if (message.type() === MessageType.Piece) {

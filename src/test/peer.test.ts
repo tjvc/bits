@@ -179,6 +179,30 @@ describe("Peer", () => {
     expect(pieces[2]).toEqual(PieceState.Downloading);
   });
 
+  test("ignores redundant unchoke messages when already unchoked or downloading", async () => {
+    const pieces = [1, 0, 0];
+    const bitfield = new Bitfield(Buffer.from([32])); // 00100000
+    const peer = await buildPeer({ pieces, bitfield });
+    const connection = peer.connection;
+    const writeSpy = jest
+      .spyOn(connection, "write")
+      .mockImplementation(jest.fn<typeof connection.write>());
+
+    // First unchoke - should request piece 2
+    connection.emit("message", Buffer.from("0000000101", "hex"));
+
+    expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(2));
+    expect(peer.state).toEqual("DOWNLOADING");
+    expect(peer.currentPiece).toEqual(2);
+    writeSpy.mockClear();
+
+    // Second unchoke - should be ignored
+    connection.emit("message", Buffer.from("0000000101", "hex"));
+
+    expect(writeSpy).not.toHaveBeenCalled();
+    expect(peer.currentPiece).toEqual(2); // Still on piece 2
+  });
+
   test("upon receiving a piece chunk, it caches it and requests the next", async () => {
     const pieces = [1];
     const currentPiece = 0;
