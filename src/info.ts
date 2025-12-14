@@ -36,6 +36,16 @@ export class Info {
     }
   }
 
+  totalLength(): number | null {
+    const length = this.info.length;
+
+    if (typeof length === "number") {
+      return length;
+    } else {
+      return null;
+    }
+  }
+
   private encodeValue(value: BDict | BList | Buffer | number): Buffer {
     if (typeof value == "number") {
       return this.encodeInt(value);

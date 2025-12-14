@@ -3,7 +3,8 @@ import fs from "fs/promises";
 import { BDecoded, BDict, BList } from "./b_data";
 import { Info } from "./info";
 import { logger } from "./logger";
-import { Peer, PieceState } from "./peer";
+import { Peer } from "./peer";
+import { Piece, PieceState } from "./piece";
 
 interface DownloadParams {
   data: BDecoded;
@@ -12,15 +13,16 @@ interface DownloadParams {
   info: Info;
   maxUploaders?: number;
   peers?: Peer[];
-  pieces?: PieceState[];
+  pieces?: Piece[];
   downloadDir?: string;
 }
 
 export class Download {
   downloadDir: string;
   peers: Peer[];
-  pieces: PieceState[];
+  pieces: Piece[];
   private maxUploaders: number;
+  private info: Info;
 
   constructor({
     data,
@@ -29,13 +31,14 @@ export class Download {
     info,
     maxUploaders = 3,
     peers = [],
-    pieces = Array(info.pieceCount()).fill(0),
+    pieces,
     downloadDir = "./",
   }: DownloadParams) {
     this.downloadDir = downloadDir;
     this.maxUploaders = maxUploaders;
     this.peers = peers;
-    this.pieces = pieces;
+    this.info = info;
+    this.pieces = pieces ?? this.initializePieces();
 
     if (this.isBDict(data) && this.isBList(data.peers)) {
       data.peers.forEach((peer: BDecoded) => {
@@ -48,7 +51,6 @@ export class Download {
               id: peer["peer id"],
               clientId,
               pieces: this.pieces,
-              pieceLength: info.pieceLength(),
             })
           );
         }
@@ -63,13 +65,15 @@ export class Download {
 
       peer.on("pieceDownloaded", async () => {
         const downloadedCount = this.pieces.filter(
-          (p) => p === PieceState.Downloaded
+          (p) => p.state === PieceState.Downloaded
         ).length;
         logger.debug(
           `Downloaded ${downloadedCount} of ${this.pieces.length} pieces`
         );
 
-        if (this.pieces.every((piece) => piece === PieceState.Downloaded)) {
+        if (
+          this.pieces.every((piece) => piece.state === PieceState.Downloaded)
+        ) {
           await this.finish();
         }
       });
@@ -116,6 +120,14 @@ export class Download {
 
     stream.end();
     await fileHandle.close();
+  }
+
+  private initializePieces(): Piece[] {
+    const chunkLength = 16384;
+    return Array.from(
+      { length: this.info.pieceCount() },
+      (_, i) => new Piece(i, this.info, chunkLength)
+    );
   }
 
   private isBDict(data: BDecoded): data is BDict {

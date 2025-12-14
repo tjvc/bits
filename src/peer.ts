@@ -4,6 +4,7 @@ import { PeerConnection } from "./peer_connection";
 import { EventEmitter } from "events";
 import { Bitfield } from "./bitfield";
 import { logger } from "./logger";
+import { Piece, PieceState } from "./piece";
 
 import fs from "fs/promises";
 
@@ -13,8 +14,7 @@ export type PeerParams = {
   infoHash: Buffer;
   id: Buffer | undefined;
   clientId: Buffer;
-  pieces: PieceState[];
-  pieceLength: number;
+  pieces: Piece[];
   state?: PeerState;
   bitfield?: Bitfield;
   currentPiece?: number | null;
@@ -30,12 +30,6 @@ export enum PeerState {
   Downloading = "DOWNLOADING",
 }
 
-export enum PieceState {
-  Required = 0,
-  Downloading = 1,
-  Downloaded = 2,
-}
-
 export enum FailureReason {
   ConnectionRefused = "CONNECTION_REFUSED",
 }
@@ -48,8 +42,7 @@ export class Peer extends EventEmitter {
   infoHash: Buffer;
   id: Buffer | undefined;
   clientId: Buffer;
-  pieces: PieceState[];
-  pieceLength: number;
+  pieces: Piece[];
   state: PeerState;
   bitfield: Bitfield | undefined;
   currentPiece: number | null;
@@ -67,7 +60,6 @@ export class Peer extends EventEmitter {
     id,
     clientId,
     pieces,
-    pieceLength,
     state = PeerState.Disconnected,
     bitfield,
     currentPiece = null,
@@ -86,7 +78,6 @@ export class Peer extends EventEmitter {
     this.id = id;
     this.clientId = clientId;
     this.pieces = pieces;
-    this.pieceLength = pieceLength;
     this.state = state;
     this.bitfield = bitfield;
     this.currentPiece = currentPiece;
@@ -195,7 +186,7 @@ export class Peer extends EventEmitter {
           );
           this.requestPieceChunk(this.currentPiece);
           this.state = PeerState.Downloading;
-          this.pieces[this.currentPiece] = PieceState.Downloading;
+          this.pieces[this.currentPiece].state = PieceState.Downloading;
         }
       }
       return;
@@ -215,23 +206,25 @@ export class Peer extends EventEmitter {
 
       this.chunks.push(message.body());
 
-      const chunksNeeded = Math.ceil(this.pieceLength / this.chunkLength);
-      if (this.chunks.length < chunksNeeded && this.currentPiece != null) {
+      if (this.currentPiece === null) {
+        return;
+      }
+
+      const piece = this.pieces[this.currentPiece];
+      const chunksNeeded = piece.chunksNeeded();
+      if (this.chunks.length < chunksNeeded) {
         this.requestPieceChunk(this.currentPiece);
-      } else if (
-        this.chunks.length === chunksNeeded &&
-        this.currentPiece != null
-      ) {
+      } else if (this.chunks.length === chunksNeeded) {
         await fs.writeFile(
           `${this.downloadDir}/${this.currentPiece}`,
           Buffer.concat(this.chunks)
         );
-        this.pieces[this.currentPiece] = PieceState.Downloaded;
+        piece.state = PieceState.Downloaded;
         this.emit("pieceDownloaded");
         this.currentPiece = this.nextPiece();
         if (this.currentPiece != null) {
           this.chunks = [];
-          this.pieces[this.currentPiece] = PieceState.Downloading;
+          this.pieces[this.currentPiece].state = PieceState.Downloading;
           this.requestPieceChunk(this.currentPiece);
         }
       }
@@ -256,19 +249,24 @@ export class Peer extends EventEmitter {
 
     this.startDownloadTimeout();
 
+    const piece = this.pieces[pieceIndex];
+    const offset = this.chunks.length * this.chunkLength;
+    const remainingBytes = piece.length() - offset;
+    const chunkSize = Math.min(this.chunkLength, remainingBytes);
+
     const request = Buffer.alloc(17); // Allocate 17 byte buffer
     request.writeUInt32BE(13); // Write length prefix (does not include length itself)
     request.writeUInt8(6, 4); // Write message type (value, offset)
     request.writeUInt32BE(pieceIndex, 5); // Write piece index
-    request.writeUInt32BE(this.chunks.length * this.chunkLength, 9); // Write begin (chunk index * chunk length)
-    request.writeUInt32BE(this.chunkLength, 13); // Write length (16 KB)
+    request.writeUInt32BE(offset, 9); // Write begin (byte offset)
+    request.writeUInt32BE(chunkSize, 13); // Write length (may be less than 16 KB for last chunk)
     this.connection.write(request);
   }
 
   nextPiece() {
     const index = this.pieces.findIndex(
       (piece, index) =>
-        piece === PieceState.Required && this.bitfield?.get(index)
+        piece.state === PieceState.Required && this.bitfield?.get(index)
     );
     return index > -1 ? index : null;
   }
@@ -280,7 +278,7 @@ export class Peer extends EventEmitter {
         `Piece download timed out for ${this.ip.toString()}, disconnecting`
       );
       if (this.currentPiece !== null) {
-        this.pieces[this.currentPiece] = PieceState.Required;
+        this.pieces[this.currentPiece].state = PieceState.Required;
         this.currentPiece = null;
       }
       this.connection.close();

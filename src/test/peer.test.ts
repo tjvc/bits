@@ -12,13 +12,14 @@ import { join } from "path";
 import { tmpdir } from "os";
 
 import { Handshake } from "../handshake";
+import { Info } from "../info";
 import {
   Peer,
   PeerParams,
   PeerState,
   PIECE_DOWNLOAD_TIMEOUT_MS,
-  PieceState,
 } from "../peer";
+import { Piece, PieceState } from "../piece";
 import { Bitfield } from "../bitfield";
 import { logger } from "../logger";
 
@@ -143,7 +144,7 @@ describe("Peer", () => {
 
   test("receives a bitfield message, sets the bitfield and sends an interested message if the peer has required pieces", async () => {
     const peer = await buildPeer({
-      pieces: [0],
+      pieces: buildPieces(1, [PieceState.Required]),
       state: PeerState.HandshakeCompleted,
     });
     const connection = peer.connection;
@@ -160,7 +161,7 @@ describe("Peer", () => {
 
   test("receives a bitfield message, sets the bitfield and closes the connection if the peer does not have required pieces", async () => {
     const peer = await buildPeer({
-      pieces: [0],
+      pieces: buildPieces(1, [PieceState.Required]),
       state: PeerState.HandshakeCompleted,
     });
     const connection = peer.connection;
@@ -185,7 +186,11 @@ describe("Peer", () => {
   });
 
   test("when unchoked, it sends a request message for a required piece offered by the peer, updates its state and marks the piece as downloading", async () => {
-    const pieces = [1, 0, 0];
+    const pieces = buildPieces(3, [
+      PieceState.Downloading,
+      PieceState.Required,
+      PieceState.Required,
+    ]);
     const bitfield = new Bitfield(Buffer.from([32])); // 00100000
     const peer = await buildPeer({ pieces, bitfield });
     const connection = peer.connection;
@@ -197,11 +202,15 @@ describe("Peer", () => {
 
     expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(2));
     expect(peer.state).toEqual("DOWNLOADING");
-    expect(pieces[2]).toEqual(PieceState.Downloading);
+    expect(pieces[2].state).toEqual(PieceState.Downloading);
   });
 
   test("ignores redundant unchoke messages when already unchoked or downloading", async () => {
-    const pieces = [1, 0, 0];
+    const pieces = buildPieces(3, [
+      PieceState.Downloading,
+      PieceState.Required,
+      PieceState.Required,
+    ]);
     const bitfield = new Bitfield(Buffer.from([32])); // 00100000
     const peer = await buildPeer({ pieces, bitfield });
     const connection = peer.connection;
@@ -225,7 +234,7 @@ describe("Peer", () => {
   });
 
   test("upon receiving a piece chunk, it caches it and requests the next", async () => {
-    const pieces = [1];
+    const pieces = buildPieces(1, [PieceState.Downloading]);
     const currentPiece = 0;
     const peer = await buildPeer({
       pieces,
@@ -249,7 +258,10 @@ describe("Peer", () => {
   });
 
   test("upon receiving the final piece chunk, it writes the piece to disk, emits a piece downloaded event, and requests the first chunk of the next", async () => {
-    const pieces = [1, 0];
+    const pieces = buildPieces(2, [
+      PieceState.Downloading,
+      PieceState.Required,
+    ]);
     const bitfield = new Bitfield(Buffer.from([255])); // 11111111
     const currentPiece = 0;
     const downloadDir = await makeDownloadDir();
@@ -303,7 +315,7 @@ describe("Peer", () => {
 
   describe("piece download timeout", () => {
     test("disconnects and resets piece state when piece download times out", async () => {
-      const pieces = [0, 0];
+      const pieces = buildPieces(2, [PieceState.Required, PieceState.Required]);
       const currentPiece = 0;
       const peer = await buildPeer({
         pieces,
@@ -319,11 +331,11 @@ describe("Peer", () => {
 
       expect(closeSpy).toHaveBeenCalled();
       expect(peer.currentPiece).toBeNull();
-      expect(pieces[0]).toEqual(PieceState.Required);
+      expect(pieces[0].state).toEqual(PieceState.Required);
     });
 
     test("resets timeout when receiving a piece chunk", async () => {
-      const pieces = [0];
+      const pieces = buildPieces(1, [PieceState.Required]);
       const currentPiece = 0;
       const peer = await buildPeer({
         pieces,
@@ -348,14 +360,12 @@ describe("Peer", () => {
     });
 
     test("clears timeout when piece download completes", async () => {
-      const pieces = [0];
+      const pieces = buildPieces(1, [PieceState.Required], 16384);
       const currentPiece = 0;
-      const pieceLength = 16384; // Single chunk piece
       const peer = await buildPeer({
         pieces,
         currentPiece,
         state: PeerState.Downloading,
-        pieceLength,
       });
       const closeSpy = jest
         .spyOn(peer.connection, "close")
@@ -372,12 +382,33 @@ describe("Peer", () => {
 
       expect(peer.downloadTimeout).toBeNull();
       expect(closeSpy).not.toHaveBeenCalled();
-      expect(pieces[0]).toEqual(PieceState.Downloaded);
+      expect(pieces[0].state).toEqual(PieceState.Downloaded);
     });
   });
 
   async function makeDownloadDir() {
     return await fs.mkdtemp(join(tmpdir(), "bits-"));
+  }
+
+  function buildPieces(
+    count: number,
+    states: PieceState[] = [],
+    pieceLength = 262144
+  ): Piece[] {
+    const totalLength = pieceLength * count;
+    const chunkLength = 16384;
+    const info = new Info({
+      "piece length": pieceLength,
+      pieces: Buffer.alloc(count * 20),
+      length: totalLength,
+    });
+    return Array.from({ length: count }, (_, i) => {
+      const piece = new Piece(i, info, chunkLength);
+      if (states[i] !== undefined) {
+        piece.state = states[i];
+      }
+      return piece;
+    });
   }
 
   async function buildPeer(args: Partial<PeerParams> = {}): Promise<Peer> {
@@ -388,10 +419,9 @@ describe("Peer", () => {
       id: Buffer.alloc(20, 2),
       clientId: Buffer.alloc(20, 3),
       state: PeerState.Disconnected,
-      pieces: [],
+      pieces: args.pieces || buildPieces(1),
       bitfield: new Bitfield(Buffer.alloc(0)),
       downloadDir: args.downloadDir || (await makeDownloadDir()),
-      pieceLength: 262144,
     };
 
     const peer = new Peer({ ...defaults, ...args });

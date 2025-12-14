@@ -7,6 +7,7 @@ import { tmpdir } from "os";
 import { Download } from "../download";
 import { Info } from "../info";
 import { Peer } from "../peer";
+import { Piece, PieceState } from "../piece";
 
 describe("Download", () => {
   test("initialises valid peers", async () => {
@@ -102,7 +103,7 @@ describe("Download", () => {
       info: buildInfo(),
       maxUploaders: 2,
       peers: [peer],
-      pieces: [2, 2],
+      pieces: buildPieces(2, [PieceState.Downloaded, PieceState.Downloaded]),
     });
     jest
       .spyOn(download, "finish")
@@ -127,7 +128,7 @@ describe("Download", () => {
       info: buildInfo(),
       maxUploaders: 2,
       peers: [peer],
-      pieces: [2, 2],
+      pieces: buildPieces(2, [PieceState.Downloaded, PieceState.Downloaded]),
       downloadDir,
     });
 
@@ -148,6 +149,27 @@ describe("Download", () => {
     });
   }
 
+  function buildPieces(
+    count: number,
+    states: PieceState[] = [],
+    pieceLength = 262144
+  ): Piece[] {
+    const totalLength = pieceLength * count;
+    const chunkLength = 16384;
+    const info = new Info({
+      "piece length": pieceLength,
+      pieces: Buffer.alloc(count * 20),
+      length: totalLength,
+    });
+    return Array.from({ length: count }, (_, i) => {
+      const piece = new Piece(i, info, chunkLength);
+      if (states[i] !== undefined) {
+        piece.state = states[i];
+      }
+      return piece;
+    });
+  }
+
   function buildMockPeer(downloadMock: () => void = jest.fn()) {
     const mockPeer = class extends Peer {
       download = downloadMock;
@@ -160,7 +182,6 @@ describe("Download", () => {
       id: Buffer.from("id"),
       clientId: Buffer.from("clientId"),
       pieces: [],
-      pieceLength: 262144,
     });
   }
 });
