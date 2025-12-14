@@ -18,6 +18,12 @@ export class Message {
   }
 
   body(): Buffer {
+    // For Piece messages, skip the 8-byte header (4 bytes index + 4 bytes offset)
+    if (this.type() === MessageType.Piece) {
+      return this.data.subarray(13);
+    }
+
+    // For other messages, return everything after the message header
     return this.data.subarray(5);
   }
 

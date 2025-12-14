@@ -251,7 +251,7 @@ describe("Peer", () => {
 
     await peer.receive(chunkMessage);
 
-    expect(peer.chunks).toEqual([chunkMessage.subarray(5)]); // 5-byte prefix
+    expect(peer.chunks).toEqual([chunkMessage.subarray(13)]); // 5-byte message header + 8-byte piece header
     expect(writeSpy).toHaveBeenCalledWith(
       buildPieceMessage(0, currentChunkIndex + 1)
     );
@@ -275,10 +275,14 @@ describe("Peer", () => {
       downloadDir,
       chunks: pieceChunks.slice(0, -1),
     });
-    const finalChunkMessage = Buffer.concat([
-      Buffer.from("0000400007", "hex"), // 4000 = 16 KB length
-      pieceChunks[15],
-    ]);
+    // Piece message: 4 bytes length + 1 byte type + 4 bytes index + 4 bytes offset + data
+    // Length = 1 (type) + 8 (index+offset) + 16384 (data) = 16393
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(16393, 0); // length
+    header.writeUInt8(7, 4); // type (Piece)
+    header.writeUInt32BE(0, 5); // piece index
+    header.writeUInt32BE(0, 9); // offset
+    const finalChunkMessage = Buffer.concat([header, pieceChunks[15]]);
     peer.emit = jest.fn<typeof peer.emit>();
     const writeSpy = jest
       .spyOn(peer.connection, "write")
