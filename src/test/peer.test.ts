@@ -8,7 +8,7 @@ import {
 } from "@jest/globals";
 
 import fs from "fs/promises";
-import { join } from "path";
+import path from "path";
 import { tmpdir } from "os";
 
 import { Handshake } from "../handshake";
@@ -290,7 +290,7 @@ describe("Peer", () => {
 
     await peer.receive(finalChunkMessage);
 
-    const downloadedPiece = await fs.readFile(`${downloadDir}/0`);
+    const downloadedPiece = await fs.readFile(path.join(downloadDir, "0"));
     expect(downloadedPiece).toEqual(Buffer.concat(pieceChunks));
     expect(peer.emit).toHaveBeenCalledWith("pieceDownloaded");
     expect(writeSpy).toHaveBeenCalledWith(buildPieceMessage(1));
@@ -391,7 +391,7 @@ describe("Peer", () => {
   });
 
   async function makeDownloadDir() {
-    return await fs.mkdtemp(join(tmpdir(), "bits-"));
+    return await fs.mkdtemp(path.join(tmpdir(), "bits-"));
   }
 
   function buildPieces(

@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import path from "path";
 
 import { BDecoded, BDict, BList } from "./b_data";
 import { Info } from "./info";
@@ -23,6 +24,7 @@ export class Download {
   pieces: Piece[];
   private maxUploaders: number;
   private info: Info;
+  private infoHash: Buffer;
 
   constructor({
     data,
@@ -32,9 +34,10 @@ export class Download {
     maxUploaders = Number(process.env.MAX_UPLOADERS ?? 3),
     peers = [],
     pieces,
-    downloadDir = "./",
+    downloadDir = "./downloads",
   }: DownloadParams) {
     this.downloadDir = downloadDir;
+    this.infoHash = infoHash;
     this.maxUploaders = maxUploaders;
     this.peers = peers;
     this.info = info;
@@ -51,6 +54,7 @@ export class Download {
               id: peer["peer id"],
               clientId,
               pieces: this.pieces,
+              downloadDir: this.torrentDir(),
             })
           );
         }
@@ -111,15 +115,20 @@ export class Download {
   }
 
   async finish() {
-    const fileHandle = await fs.open(`${this.downloadDir}/download`, "w");
+    const torrentDir = this.torrentDir();
+    const fileHandle = await fs.open(path.join(torrentDir, "download"), "w");
     const stream = fileHandle.createWriteStream();
 
     for (let i = 0; i < this.pieces.length; i++) {
-      stream.write(await fs.readFile(`${this.downloadDir}/${i}`));
+      stream.write(await fs.readFile(path.join(torrentDir, String(i))));
     }
 
     stream.end();
     await fileHandle.close();
+  }
+
+  torrentDir(): string {
+    return path.join(this.downloadDir, this.infoHash.toString("hex"));
   }
 
   private initializePieces(): Piece[] {

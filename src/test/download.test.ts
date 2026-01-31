@@ -1,7 +1,7 @@
 import { describe, expect, jest, test } from "@jest/globals";
 
 import fs from "fs/promises";
-import { join } from "path";
+import path from "path";
 import { tmpdir } from "os";
 
 import { Download } from "../download";
@@ -116,14 +116,17 @@ describe("Download", () => {
 
   test("when the download is finished it concatenates all pieces on disk", async () => {
     const downloadDir = await makeDownloadDir();
+    const infoHash = Buffer.from("infoHash");
+    const torrentDir = path.join(downloadDir, infoHash.toString("hex"));
+    await fs.mkdir(torrentDir, { recursive: true });
     const firstPiece = Buffer.alloc(16384, 1);
-    await fs.writeFile(`${downloadDir}/0`, firstPiece);
+    await fs.writeFile(path.join(torrentDir, "0"), firstPiece);
     const secondPiece = Buffer.alloc(16384, 2);
-    await fs.writeFile(`${downloadDir}/1`, secondPiece);
+    await fs.writeFile(path.join(torrentDir, "1"), secondPiece);
     const peer = buildMockPeer();
     const download = new Download({
       data: {},
-      infoHash: Buffer.from("infoHash"),
+      infoHash,
       clientId: Buffer.from("clientId"),
       info: buildInfo(),
       maxUploaders: 2,
@@ -134,12 +137,12 @@ describe("Download", () => {
 
     await download.finish();
 
-    const downloadedFile = await fs.readFile(`${downloadDir}/download`);
+    const downloadedFile = await fs.readFile(path.join(torrentDir, "download"));
     expect(downloadedFile).toEqual(Buffer.concat([firstPiece, secondPiece]));
   });
 
   async function makeDownloadDir() {
-    return await fs.mkdtemp(join(tmpdir(), "bits-"));
+    return await fs.mkdtemp(path.join(tmpdir(), "bits-"));
   }
 
   function buildInfo() {

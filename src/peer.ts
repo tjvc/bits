@@ -7,6 +7,7 @@ import { logger } from "./logger";
 import { Piece, PieceState } from "./piece";
 
 import fs from "fs/promises";
+import path from "path";
 
 export type PeerParams = {
   ip: Buffer;
@@ -215,8 +216,9 @@ export class Peer extends EventEmitter {
       if (this.chunks.length < chunksNeeded) {
         this.requestPieceChunk(this.currentPiece);
       } else if (this.chunks.length === chunksNeeded) {
+        await fs.mkdir(this.downloadDir, { recursive: true });
         await fs.writeFile(
-          `${this.downloadDir}/${this.currentPiece}`,
+          path.join(this.downloadDir, String(this.currentPiece)),
           Buffer.concat(this.chunks)
         );
         piece.state = PieceState.Downloaded;
