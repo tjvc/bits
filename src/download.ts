@@ -29,7 +29,7 @@ export class Download {
     infoHash,
     clientId,
     info,
-    maxUploaders = 3,
+    maxUploaders = Number(process.env.MAX_UPLOADERS ?? 3),
     peers = [],
     pieces,
     downloadDir = "./",
