@@ -117,12 +117,21 @@ describe("Download", () => {
   test("when the download is finished it concatenates all pieces on disk", async () => {
     const downloadDir = await makeDownloadDir();
     const infoHash = Buffer.from("infoHash");
-    const torrentDir = path.join(downloadDir, infoHash.toString("hex"));
-    await fs.mkdir(torrentDir, { recursive: true });
+    const incompleteDir = path.join(
+      downloadDir,
+      "incomplete",
+      infoHash.toString("hex")
+    );
+    const completeDir = path.join(
+      downloadDir,
+      "complete",
+      infoHash.toString("hex")
+    );
+    await fs.mkdir(incompleteDir, { recursive: true });
     const firstPiece = Buffer.alloc(16384, 1);
-    await fs.writeFile(path.join(torrentDir, "0"), firstPiece);
+    await fs.writeFile(path.join(incompleteDir, "0"), firstPiece);
     const secondPiece = Buffer.alloc(16384, 2);
-    await fs.writeFile(path.join(torrentDir, "1"), secondPiece);
+    await fs.writeFile(path.join(incompleteDir, "1"), secondPiece);
     const peer = buildMockPeer();
     const download = new Download({
       data: {},
@@ -137,17 +146,28 @@ describe("Download", () => {
 
     await download.finish();
 
-    const downloadedFile = await fs.readFile(path.join(torrentDir, "download"));
+    const downloadedFile = await fs.readFile(
+      path.join(completeDir, "download")
+    );
     expect(downloadedFile).toEqual(Buffer.concat([firstPiece, secondPiece]));
   });
 
   test("when the download is finished it cleans up piece files", async () => {
     const downloadDir = await makeDownloadDir();
     const infoHash = Buffer.from("infoHash");
-    const torrentDir = path.join(downloadDir, infoHash.toString("hex"));
-    await fs.mkdir(torrentDir, { recursive: true });
-    await fs.writeFile(path.join(torrentDir, "0"), Buffer.alloc(16384, 1));
-    await fs.writeFile(path.join(torrentDir, "1"), Buffer.alloc(16384, 2));
+    const incompleteDir = path.join(
+      downloadDir,
+      "incomplete",
+      infoHash.toString("hex")
+    );
+    const completeDir = path.join(
+      downloadDir,
+      "complete",
+      infoHash.toString("hex")
+    );
+    await fs.mkdir(incompleteDir, { recursive: true });
+    await fs.writeFile(path.join(incompleteDir, "0"), Buffer.alloc(16384, 1));
+    await fs.writeFile(path.join(incompleteDir, "1"), Buffer.alloc(16384, 2));
     const download = new Download({
       data: {},
       infoHash,
@@ -160,8 +180,8 @@ describe("Download", () => {
 
     await download.finish();
 
-    await expect(fs.access(path.join(torrentDir, "0"))).rejects.toThrow();
-    await expect(fs.access(path.join(torrentDir, "1"))).rejects.toThrow();
+    await expect(fs.access(path.join(completeDir, "0"))).rejects.toThrow();
+    await expect(fs.access(path.join(completeDir, "1"))).rejects.toThrow();
   });
 
   async function makeDownloadDir() {

@@ -54,7 +54,7 @@ export class Download {
               id: peer["peer id"],
               clientId,
               pieces: this.pieces,
-              downloadDir: this.torrentDir(),
+              downloadDir: this.incompleteDir(),
             })
           );
         }
@@ -115,7 +115,7 @@ export class Download {
   }
 
   async finish() {
-    const torrentDir = this.torrentDir();
+    const torrentDir = this.incompleteDir();
     const fileHandle = await fs.open(path.join(torrentDir, "download"), "w");
     const stream = fileHandle.createWriteStream();
 
@@ -133,10 +133,26 @@ export class Download {
         logger.warn(`Failed to clean up piece file ${i}`, err as Error);
       }
     }
+
+    const completedDir = this.completedDir();
+    await fs.mkdir(path.dirname(completedDir), { recursive: true });
+    await fs.rename(torrentDir, completedDir);
   }
 
-  torrentDir(): string {
-    return path.join(this.downloadDir, this.infoHash.toString("hex"));
+  incompleteDir(): string {
+    return path.join(
+      this.downloadDir,
+      "incomplete",
+      this.infoHash.toString("hex")
+    );
+  }
+
+  private completedDir(): string {
+    return path.join(
+      this.downloadDir,
+      "complete",
+      this.infoHash.toString("hex")
+    );
   }
 
   private initializePieces(): Piece[] {
