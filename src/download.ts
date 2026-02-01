@@ -116,7 +116,10 @@ export class Download {
 
   async finish() {
     const torrentDir = this.incompleteDir();
-    const fileHandle = await fs.open(path.join(torrentDir, "download"), "w");
+    const fileHandle = await fs.open(
+      path.join(torrentDir, this.info.name()),
+      "w"
+    );
     const stream = fileHandle.createWriteStream();
 
     for (let i = 0; i < this.pieces.length; i++) {

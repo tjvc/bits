@@ -46,6 +46,16 @@ export class Info {
     }
   }
 
+  name(): string {
+    const name = this.info.name;
+
+    if (Buffer.isBuffer(name)) {
+      return name.toString("utf-8");
+    } else {
+      return "download";
+    }
+  }
+
   private encodeValue(value: BDict | BList | Buffer | number): Buffer {
     if (typeof value == "number") {
       return this.encodeInt(value);

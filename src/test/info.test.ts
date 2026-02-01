@@ -45,4 +45,27 @@ describe("Info", () => {
       info.pieceCount();
     }).toThrow("Invalid pieces");
   });
+
+  test("it returns the name", async () => {
+    const infoDict = {
+      name: Buffer.from("test-file.txt"),
+      "piece length": 262144,
+      pieces: Buffer.alloc(20),
+    };
+
+    const info = new Info(infoDict);
+
+    expect(info.name()).toEqual("test-file.txt");
+  });
+
+  test("it returns a default name when name is missing", async () => {
+    const infoDict = {
+      "piece length": 262144,
+      pieces: Buffer.alloc(20),
+    };
+
+    const info = new Info(infoDict);
+
+    expect(info.name()).toEqual("download");
+  });
 });

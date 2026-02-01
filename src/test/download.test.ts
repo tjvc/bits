@@ -147,7 +147,7 @@ describe("Download", () => {
     await download.finish();
 
     const downloadedFile = await fs.readFile(
-      path.join(completeDir, "download")
+      path.join(completeDir, "test-file.txt")
     );
     expect(downloadedFile).toEqual(Buffer.concat([firstPiece, secondPiece]));
   });
@@ -190,6 +190,7 @@ describe("Download", () => {
 
   function buildInfo() {
     return new Info({
+      name: Buffer.from("test-file.txt"),
       "piece length": 262144,
       pieces: Buffer.alloc(20),
     });
