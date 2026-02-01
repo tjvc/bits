@@ -125,6 +125,14 @@ export class Download {
 
     stream.end();
     await fileHandle.close();
+
+    for (let i = 0; i < this.pieces.length; i++) {
+      try {
+        await fs.unlink(path.join(torrentDir, String(i)));
+      } catch (err) {
+        logger.warn(`Failed to clean up piece file ${i}`, err as Error);
+      }
+    }
   }
 
   torrentDir(): string {

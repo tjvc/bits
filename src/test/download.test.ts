@@ -141,6 +141,29 @@ describe("Download", () => {
     expect(downloadedFile).toEqual(Buffer.concat([firstPiece, secondPiece]));
   });
 
+  test("when the download is finished it cleans up piece files", async () => {
+    const downloadDir = await makeDownloadDir();
+    const infoHash = Buffer.from("infoHash");
+    const torrentDir = path.join(downloadDir, infoHash.toString("hex"));
+    await fs.mkdir(torrentDir, { recursive: true });
+    await fs.writeFile(path.join(torrentDir, "0"), Buffer.alloc(16384, 1));
+    await fs.writeFile(path.join(torrentDir, "1"), Buffer.alloc(16384, 2));
+    const download = new Download({
+      data: {},
+      infoHash,
+      clientId: Buffer.from("clientId"),
+      info: buildInfo(),
+      peers: [buildMockPeer()],
+      pieces: buildPieces(2, [PieceState.Downloaded, PieceState.Downloaded]),
+      downloadDir,
+    });
+
+    await download.finish();
+
+    await expect(fs.access(path.join(torrentDir, "0"))).rejects.toThrow();
+    await expect(fs.access(path.join(torrentDir, "1"))).rejects.toThrow();
+  });
+
   async function makeDownloadDir() {
     return await fs.mkdtemp(path.join(tmpdir(), "bits-"));
   }
